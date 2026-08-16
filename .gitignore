@@ -1,0 +1,34 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Machine-specific state and local configuration
+local/
+
+# Datasets, rollouts, checkpoints, and run outputs
+data/*
+!data/.gitkeep
+checkpoints/*
+!checkpoints/.gitkeep
+runs/*
+!runs/.gitkeep
+
+# Model and adapter artifacts
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# Logs and media produced by robot runs
+*.log
+*.mp4
+*.mov
+*.avi
+

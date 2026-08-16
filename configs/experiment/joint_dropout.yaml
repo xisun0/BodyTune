@@ -1,0 +1,18 @@
+name: joint_dropout_poc
+robot_configuration: so101_5dof
+
+perturbation:
+  type: joint_disable
+  joint: null  # Select only after nominal task and safety checks are established.
+
+policy:
+  freeze_base: true
+  adapter: residual
+
+evaluation:
+  primary_x_axis: real_world_interactions
+  metrics:
+    - success_rate
+    - recovery_rate
+  interaction_budgets: [0, 5, 10, 20, 50]
+

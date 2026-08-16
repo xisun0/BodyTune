@@ -1,0 +1,28 @@
+# Copy this file into an untracked run/local configuration and replace every null
+# before a real-world experiment. Do not add absolute machine-specific paths here.
+bodytune:
+  revision: null
+
+lerobot:
+  repository: https://github.com/huggingface/lerobot
+  revision: 882c80d446a63a44868c67ae535467af32ce0e80
+
+base_model:
+  repo_id: lerobot/smolvla_base
+  revision: c83c3163b8ca9b7e67c509fffd9121e66cb96205
+
+robot:
+  id: null
+  type: so101_follower
+  configuration: nominal_6dof
+  calibration:
+    identifier: null
+    sha256: null
+
+experiment:
+  name: null
+  perturbation: null
+  adapter_checkpoint: null
+  dataset_or_rollout_source: null
+  random_seed: null
+  real_world_interactions: null

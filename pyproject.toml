@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bodytune"
+version = "0.1.0"
+description = "Rapid embodiment adaptation for pretrained robot policies"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "lerobot[feetech,smolvla] @ git+https://github.com/huggingface/lerobot.git@882c80d446a63a44868c67ae535467af32ce0e80",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.9",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
