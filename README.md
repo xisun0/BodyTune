@@ -60,3 +60,20 @@ runs/          untracked run outputs; immutable metadata may be promoted deliber
 
 Use [uv](https://docs.astral.sh/uv/) for the BodyTune environment. Do not alter a known-working robot environment until its dependencies and hardware behavior have been verified.
 
+## Reproducible local environment
+
+BodyTune uses its own `.venv`, Python 3.10, and the exact LeRobot Git revision
+recorded in `pyproject.toml` and `uv.lock`. The pinned historical LeRobot commit
+contains Git LFS test artifacts that are not needed at runtime and are no longer
+available remotely. Create the environment without downloading those artifacts:
+
+```bash
+GIT_LFS_SKIP_SMUDGE=1 uv sync --frozen
+uv run python -c 'import lerobot; print(lerobot.__version__)'
+uv run pytest
+```
+
+This environment is separate from any system or Homebrew LeRobot installation.
+Machine-specific robot settings belong in the ignored `local/` directory. A
+`null` port or camera identifier means the hardware has not been identified and
+must cause hardware construction to fail closed rather than guessing a device.

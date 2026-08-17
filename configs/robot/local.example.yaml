@@ -1,0 +1,30 @@
+# Copy to local/robot.yaml and fill only from read-only device discovery.
+schema_version: 1
+
+robot:
+  id: my_follower
+  type: so101_follower
+  port: null
+  use_degrees: false
+  position_unit: normalized_calibration_range
+  max_relative_target: 2.0
+  disable_torque_on_disconnect: true
+
+cameras:
+  front:
+    type: opencv
+    index_or_path: null
+    width: 640
+    height: 480
+    fps: 30
+    mounting: external_fixed
+
+calibration:
+  identifier: my_follower
+  sha256: null
+
+safety:
+  allow_motion: false
+  require_confirmation_per_probe: true
+  max_probe_magnitude: 2.0
+  max_probe_timeout_s: 1.0
