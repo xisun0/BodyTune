@@ -65,3 +65,14 @@ def test_both_training_modes_and_integer_reload(tmp_path):
         == reports[1]["training"]["initial_weights_sha256"]
     )
     assert reports[0]["data"]["sha256"] == reports[1]["data"]["sha256"]
+
+
+def test_same_local_displacement_has_same_symbol_at_any_step():
+    model = AlignedModel(AlignedConfig(mode="local"))
+    model.eval()
+    motion = torch.rand(1, 95, 2) * 0.02
+    motion[:, 80] = motion[:, 3]
+    with torch.no_grad():
+        channel, ids = model.notator(motion)
+    torch.testing.assert_close(channel[:, 80], channel[:, 3], atol=0, rtol=0)
+    assert ids[0, 80] == ids[0, 3]
