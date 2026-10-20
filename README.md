@@ -109,3 +109,7 @@ Reload evaluation for either mode with `.venv-roboscore/bin/python -m roboscore.
 ### Observed learning status
 
 Both learning modes have completed training and checkpoint-reload evaluation. Fixed32 test mean NRMSE is 0.2075; EOS fine-tuning reaches 0.2049. **Both have 0% strict drawing success** at the 0.01 threshold. Although the EOS architecture supports 1–32 motion symbols, the selected trained checkpoint uses just one symbol for every test example (length collapse), with only four distinct test messages. This is not a useful variable-length motion notation yet. See [full results](docs/learning-results.md); the slight metric difference is not evidence that EOS helps, since the EOS run received 40 additional epochs of optimization.
+
+## Single-example checkpoint inference
+
+Run `.venv-roboscore/bin/python figures/inference.py` after both training runs. It reloads both checkpoints and uses the first circle in the saved test split (index 3), without selecting by error. The receiver gets only integer scores and its initial angles. Outputs in `outputs/inference/` include `example.json` (actual messages and errors), `inference.png` (aligned target/prediction) and `inference.gif` (full arm postures). No optimization or IK correction is performed during this inference.
