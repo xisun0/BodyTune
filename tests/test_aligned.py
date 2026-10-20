@@ -53,7 +53,7 @@ def test_both_training_modes_and_integer_reload(tmp_path):
     for i, name in enumerate(("train", "val", "test")):
         dataset(6, 20 + i, ModelConfig(tokens=1), "circles", source / f"{name}_demonstrations.npz")
     reports = []
-    for mode in ("global", "local"):
+    for mode in ("global", "local", "binned"):
         report = train(
             source, tmp_path / mode, mode=mode, epochs=1, min_epochs=1, batch_size=6, threads=2
         )
@@ -76,3 +76,19 @@ def test_same_local_displacement_has_same_symbol_at_any_step():
         channel, ids = model.notator(motion)
     torch.testing.assert_close(channel[:, 80], channel[:, 3], atol=0, rtol=0)
     assert ids[0, 80] == ids[0, 3]
+
+
+def test_fixed_diameter_bins_and_matching_performer_initialization():
+    from roboscore.aligned import DiameterBins
+
+    centers = torch.linspace(0.24, 0.70, 9)
+    centers = (centers[:-1] + centers[1:]) / 2
+    _, ids = DiameterBins()(centers)
+    assert ids[:, 0].tolist() == list(range(8))
+    _, endpoints = DiameterBins()(torch.tensor([0.24, 0.70]))
+    assert endpoints[:, 0].tolist() == [0, 7]
+    torch.manual_seed(123)
+    a = AlignedModel(AlignedConfig(mode="global"))
+    torch.manual_seed(123)
+    b = AlignedModel(AlignedConfig(mode="binned"))
+    assert weight_hash(a.performer) == weight_hash(b.performer)

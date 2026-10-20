@@ -1,4 +1,4 @@
-"""Matched 128-GRU global-vs-step-aligned communication on saved circles."""
+"""Matched GRU128 learned scores and fixed diameter-bin control on saved circles."""
 
 import argparse
 import csv
@@ -32,12 +32,16 @@ class AlignedConfig:
     motion_scale: float = 0.05
 
     def __post_init__(self):
-        if self.mode not in ("global", "local") or self.hidden != 128 or self.symbols != 8:
-            raise ValueError("expected global/local, 128 GRU units and 8 symbols")
+        if (
+            self.mode not in ("global", "local", "binned")
+            or self.hidden != 128
+            or self.symbols != 8
+        ):
+            raise ValueError("expected global/local/binned, 128 GRU units and 8 symbols")
 
     @property
     def tokens(self):
-        return 1 if self.mode == "global" else self.steps - 1
+        return self.steps - 1 if self.mode == "local" else 1
 
 
 class MotionEncoder(nn.Module):
@@ -61,6 +65,19 @@ class MotionEncoder(nn.Module):
         soft = (logits / temperature).softmax(-1)
         hard = F.one_hot(ids, self.config.symbols).to(soft.dtype)
         return (hard + soft - soft.detach() if self.training else hard), ids
+
+
+class DiameterBins(nn.Module):
+    """Eight fixed equal-width bins on the predeclared [.24, .70] diameter range."""
+
+    def forward(self, diameter, temperature=1.0):
+        if diameter.ndim != 1 or not torch.isfinite(diameter).all():
+            raise ValueError("expected finite scalar diameters")
+        if ((diameter < 0.24) | (diameter > 0.70)).any():
+            raise ValueError("diameter outside declared generation range")
+        edges = torch.linspace(0.24, 0.70, 9, dtype=diameter.dtype, device=diameter.device)
+        ids = torch.bucketize(diameter, edges[1:-1], right=True)[:, None]
+        return F.one_hot(ids, 8).float(), ids
 
 
 class StepPerformer(Performer):
@@ -88,6 +105,8 @@ class AlignedModel(nn.Module):
         self.config = config
         self.notator = MotionEncoder(config)
         self.performer = StepPerformer(config)
+        if config.mode == "binned":
+            self.notator = DiameterBins()
 
     def decode(self, scores, q0):
         if scores.dtype != torch.long or scores.ndim != 2 or scores.shape[1] != self.config.tokens:
@@ -101,7 +120,7 @@ class AlignedModel(nn.Module):
         return self.performer(channel, q0), ids
 
 
-def load_splits(source):
+def load_splits(source, mode="global"):
     splits, hashes = {}, {}
     for name in ("train", "val", "test"):
         path = Path(source) / f"{name}_demonstrations.npz"
@@ -109,10 +128,10 @@ def load_splits(source):
         with np.load(path, allow_pickle=False) as data:
             if set(data["family"].tolist()) != {"circle"} or float(data["dt"]) != 0.05:
                 raise ValueError("expected saved circle protocol")
-            # Source robot observations only. Diameter labels and B trajectories do not enter encoder.
+            # Learned modes read only A endpoint displacements; binned mode reads oracle diameters.
             motion = np.diff(Arm().fk(data["q_a"]), axis=1)
             splits[name] = (
-                torch.tensor(motion, dtype=torch.float32),
+                torch.tensor(data["diameter"] if mode == "binned" else motion, dtype=torch.float32),
                 torch.tensor(data["q_target"], dtype=torch.float32),
             )
     return splits, hashes
@@ -168,7 +187,7 @@ def train(
     if min(epochs, batch_size, threads) < 1 or patience < 0 or not 0 <= min_epochs <= epochs:
         raise ValueError("invalid training/stopping configuration")
     config = AlignedConfig(mode=mode)
-    splits, hashes = load_splits(source)
+    splits, hashes = load_splits(source, mode)
     output = Path(output)
     output.mkdir(parents=True, exist_ok=False)
     torch.set_num_threads(threads)
@@ -260,6 +279,7 @@ def train(
     report = {
         "config": asdict(config),
         "nominal_bits": config.tokens * 3,
+        "diameter_bin_edges": np.linspace(0.24, 0.70, 9).tolist() if mode == "binned" else None,
         "training": {
             "epochs": epochs,
             "completed_epochs": epoch,
@@ -290,9 +310,12 @@ def train(
             "torch": torch.__version__,
             "lock_sha256": hashlib.sha256(Path("uv.lock").read_bytes()).hexdigest(),
         },
-        "limits": "Same parameter shapes/init and optimizer, but global 3 bits vs local 285 bits. "
+        "limits": "Binned mode bypasses the learned Notator using fixed equal-width true-diameter labels; "
+        "it estimates achieved performance, not a theoretical upper bound. "
+        "Global 3 bits vs local 285 bits. "
         "Shared phase clock and circle-only data. Locality is not isolated from capacity. "
-        "No grammar/compositionality claim; deterministic straight-through argmax training.",
+        "No grammar/compositionality claim. Learned modes use straight-through argmax; "
+        "binned mode trains only the Performer with fixed integer labels.",
     }
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps({"mode": mode, "summary": summary}), flush=True)
@@ -302,7 +325,7 @@ def train(
 def reevaluate(directory, source):
     directory = Path(directory)
     checkpoint = torch.load(directory / "best.pt", weights_only=True)
-    splits, hashes = load_splits(source)
+    splits, hashes = load_splits(source, checkpoint["config"]["mode"])
     if hashes != checkpoint["data_sha256"]:
         raise ValueError("source hashes changed")
     torch.set_num_threads(4)
@@ -317,7 +340,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, default=Path("outputs/circles1"))
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--mode", choices=["global", "local"], default="global")
+    parser.add_argument("--mode", choices=["global", "local", "binned"], default="global")
     parser.add_argument("--epochs", type=int, default=300)
     parser.add_argument("--min-epochs", type=int, default=80)
     parser.add_argument("--patience", type=int, default=40)
