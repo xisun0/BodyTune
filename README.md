@@ -190,3 +190,21 @@ Both train from scratch with seed 123, Adam lr=0.001, batch size 64, clipping 1,
 After both runs, `.venv-roboscore/bin/python figures/aligned.py` checks exact agreement of source hashes, ordered test data, model parameter counts and initial weight hashes. It saves target/execution overlays, validation curves, local displacement/code scatter plots, score sequences and descriptive code statistics under `outputs/aligned128/`. The one-token step-permutation control must reproduce its normal result exactly. Symbol statistics are observational summaries, not supplied meanings or proof of compositionality.
 
 Completed matched GRU128 result: global1 **0.03334 / 3.33%**, local95 **0.01395 / 30.42%** (test mean NRMSE / strict success). Permuting the local score's action positions changes performance to **0.01822 / 8.75%**, so order affects execution. The global codebook used only 2/8 symbols and local used 3/8. The global baseline is underutilized, message budgets differ by 95×, and these circle-only results do not establish compositional semantics. [Full aligned-score report](docs/aligned-comparison.md).
+
+## Fixed eight-bin diameter control (GRU128)
+
+```bash
+.venv-roboscore/bin/python -m roboscore.aligned --source outputs/circles1 \
+  --output outputs/aligned128/binned8 --mode binned
+.venv-roboscore/bin/python -m roboscore.aligned --source outputs/circles1 \
+  --output outputs/aligned128/binned8 --mode binned --evaluate
+.venv-roboscore/bin/python figures/binned.py
+```
+
+This diagnostic bypasses the Notator. The true scalar diameter is mapped to one of eight **fixed equal-width bins** on the predeclared generation interval [0.24, 0.70], width 0.0575. Internal boundaries belong to the upper bin; the right endpoint belongs to bin 7. Only a single integer bin ID enters the Performer: neither the exact diameter nor its within-bin residual reaches the controller. Bin IDs have no imposed numerical relationship in the learned embedding.
+
+The GRU128 Performer, including its seeded initial weights, matches the learned global1 arm exactly. The original 1,200/240/240 files, Adam lr=0.001, batch64, clip1, maximum300/minimum80 epochs, validation patience40 and rollout objective are retained. Only the learned encoder is removed from optimization. Tests check all eight bin centers, endpoints, identical Performer initialization, train/reload equivalence and dataset hash checks. This measures achievable performance for a fixed oracle quantizer under one training run, not a theoretical success ceiling or an autonomously learned notation.
+
+`figures/binned.py` compares executions with the learned global baseline and computes an ideal bin-midpoint-circle reference. That reference excludes controller errors and kinematic feasibility checks; it is not an upper bound over bin choices, representative diameters or receiver-state-dependent policies.
+
+Completed fixed-bin result: **NRMSE 0.01158, strict success 117/240 = 48.75%, feasible100%, all8 IDs used**; shuffled bins reduce success to7.5%. Training stopped at242 with best epoch202; checkpoint reload reproduces results. The ideal bin-midpoint-circle reference gives72.5% geometric success without controller/feasibility checks; neither number is a theoretical upper bound. This substantially improves on learned global1 (3.33%) while trailing the exact-continuous-diameter diagnostic (92.92%). [Protocol, collapse interpretation and results](docs/diameter-bins.md).

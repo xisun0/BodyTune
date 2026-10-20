@@ -1,0 +1,192 @@
+{
+  "report": {
+    "config": {
+      "mode": "binned",
+      "hidden": 128,
+      "encoder_hidden": 64,
+      "symbols": 8,
+      "steps": 96,
+      "dt": 0.05,
+      "motion_scale": 0.05
+    },
+    "nominal_bits": 3,
+    "diameter_bin_edges": [
+      0.24,
+      0.2975,
+      0.355,
+      0.4125,
+      0.47,
+      0.5275,
+      0.585,
+      0.6425,
+      0.7
+    ],
+    "training": {
+      "epochs": 300,
+      "completed_epochs": 242,
+      "best_epoch": 202,
+      "stopping_reason": "validation_patience",
+      "min_epochs": 80,
+      "patience": 40,
+      "seed": 123,
+      "batch_size": 64,
+      "threads": 4,
+      "optimizer": "Adam",
+      "learning_rate": 0.001,
+      "gradient_clip": 1.0,
+      "seconds": 204.59209912479855,
+      "parameters": 119874,
+      "performer_parameters": 119874,
+      "initial_weights_sha256": "330cb3febd5ee1d5132d68d533043327b243e1fbbbd719efceed2027cc40ae83"
+    },
+    "data": {
+      "source": "outputs/circles1",
+      "sha256": {
+        "train": "9edde9e0180277492b66b81eb7191bb6ab2fe2b7c5c3dc601cfe6a6974122ed9",
+        "val": "3fe7cfdedb7f0ba68a69f452268e386230d65208980597664d92d07890e4db2a",
+        "test": "3051bd68dded0db8aea3d740171be537284688a9840210589216d757828397c1"
+      },
+      "counts": {
+        "train": 1200,
+        "val": 240,
+        "test": 240
+      }
+    },
+    "summary": {
+      "test": {
+        "count": 240,
+        "feasible_rate": 1.0,
+        "success_rate": 0.4875,
+        "mean_nrmse": 0.01157971378415823,
+        "median_nrmse": 0.010366450063884258,
+        "mean_rmse": 0.016065767034888268,
+        "max_point_error": 0.09099519997835159,
+        "distinct_scores": 8,
+        "symbols_used": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "tokens": 1
+      },
+      "shuffle_demonstrations": {
+        "count": 240,
+        "feasible_rate": 1.0,
+        "success_rate": 0.075,
+        "mean_nrmse": 0.08081858605146408,
+        "median_nrmse": 0.06676025688648224,
+        "mean_rmse": 0.10868939012289047,
+        "max_point_error": 0.4212445318698883,
+        "distinct_scores": 8,
+        "symbols_used": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "tokens": 1
+      },
+      "permute_steps": {
+        "count": 240,
+        "feasible_rate": 1.0,
+        "success_rate": 0.4875,
+        "mean_nrmse": 0.01157971378415823,
+        "median_nrmse": 0.010366450063884258,
+        "mean_rmse": 0.016065767034888268,
+        "max_point_error": 0.09099519997835159,
+        "distinct_scores": 8,
+        "symbols_used": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "tokens": 1
+      }
+    },
+    "provenance": {
+      "revision": "1dc5870c88b82679493b11af5b085ed687335793",
+      "dirty_at_start": false,
+      "torch": "2.7.1",
+      "lock_sha256": "f62eeef11f8f0cc26d03f5f151cebe66bbac093ada6ee8dce9dbdfef9b010a80"
+    },
+    "limits": "Binned mode bypasses the learned Notator using fixed equal-width true-diameter labels; it estimates achieved performance, not a theoretical upper bound. Global 3 bits vs local 285 bits. Shared phase clock and circle-only data. Locality is not isolated from capacity. No grammar/compositionality claim. Learned modes use straight-through argmax; binned mode trains only the Performer with fixed integer labels."
+  },
+  "circle_diagnostics": {
+    "circle_fit_valid": 240,
+    "count": 240,
+    "mean_radial_error_over_radius": 0.01747938132960621,
+    "mean_relative_diameter_error": 0.03698587682220003,
+    "mean_turns": 0.9955519827723727,
+    "mean_closure_over_target_diameter": 0.02915319234296958
+  },
+  "bin_counts": [
+    {
+      "id": 0,
+      "test_count": 27,
+      "lower": 0.24,
+      "upper": 0.2975
+    },
+    {
+      "id": 1,
+      "test_count": 32,
+      "lower": 0.2975,
+      "upper": 0.355
+    },
+    {
+      "id": 2,
+      "test_count": 31,
+      "lower": 0.355,
+      "upper": 0.4125
+    },
+    {
+      "id": 3,
+      "test_count": 27,
+      "lower": 0.4125,
+      "upper": 0.47
+    },
+    {
+      "id": 4,
+      "test_count": 26,
+      "lower": 0.47,
+      "upper": 0.5275
+    },
+    {
+      "id": 5,
+      "test_count": 30,
+      "lower": 0.5275,
+      "upper": 0.585
+    },
+    {
+      "id": 6,
+      "test_count": 40,
+      "lower": 0.585,
+      "upper": 0.6425
+    },
+    {
+      "id": 7,
+      "test_count": 27,
+      "lower": 0.6425,
+      "upper": 0.7
+    }
+  ],
+  "midpoint_circle_reference": {
+    "mean_nrmse": 0.007590450160552598,
+    "geometric_success_rate": 0.725,
+    "success_count": 174,
+    "limits": "Ideal midpoint circles; no kinematic feasibility check. Not an upper bound: other representatives, state-dependent outputs or different bins may score differently."
+  }
+}
