@@ -29,6 +29,12 @@ def main():
                 ax.plot(*p.T, style, label=label)
             length = np.sum((data["scores"][i] >= 0) & (data["scores"][i] < 8))
             ax.set(title=f"{family}: tokens={length}", xlabel="Relative x", ylabel="Relative y")
+            # Expand the shorter coordinate span so narrow curves keep readable axes.
+            x0, x1 = ax.get_xlim()
+            y0, y1 = ax.get_ylim()
+            span = max(x1 - x0, y1 - y0)
+            ax.set_xlim((x0 + x1 - span) / 2, (x0 + x1 + span) / 2)
+            ax.set_ylim((y0 + y1 - span) / 2, (y0 + y1 + span) / 2)
             ax.set_aspect("equal", adjustable="box")
         axes.flat[0].legend(frameon=False, fontsize=8)
         fig.savefig(source / "drawings.png", dpi=150)
