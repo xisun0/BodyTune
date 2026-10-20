@@ -49,3 +49,61 @@ def test_learning_pipeline_smoke(tmp_path):
     checkpoint = torch.load(tmp_path / "train/best.pt", weights_only=True)
     assert checkpoint["config"]["tokens"] == 32
     assert checkpoint["config"]["symbols"] == 8
+
+
+def test_variable_eos_truncation_and_integer_roundtrip():
+    config = ModelConfig(steps=8, variable=True)
+    model = MotionModel(config)
+    a = torch.rand(2, 8, 2)
+    with torch.no_grad():
+        model.notator.head.weight.zero_()
+        model.notator.head.bias.zero_()
+        model.notator.head.bias[8] = 5
+    model.train()
+    channel, ids = model.notator(features(a))
+    assert ids.shape == (2, 33)
+    assert torch.all(ids[:, 0] < 8)
+    assert torch.all(ids[:, 1] == 8)
+    assert torch.all(ids[:, 2:] == -1)
+    torch.testing.assert_close(channel[:, 1:].detach(), torch.zeros(2, 31, 8))
+    torch.testing.assert_close(channel.detach(), model.channel_from_scores(ids))
+    model.notator.mean_length.backward()
+    assert model.notator.head.bias.grad[8].abs() > 0
+    with torch.no_grad():
+        model.notator.head.bias[8] = -100
+    _, full = model.notator(features(a))
+    assert torch.all(full[:, :32] < 8)
+    assert torch.all(full[:, 32] == 8)
+
+
+def test_invalid_eos_transport_is_rejected():
+    import pytest
+
+    model = MotionModel(ModelConfig(steps=8, variable=True))
+    score = torch.full((1, 33), -1, dtype=torch.long)
+    score[0, :2] = torch.tensor([2, 8])
+    assert model.channel_from_scores(score).sum() == 1
+    score[0, 3] = 5
+    with pytest.raises(ValueError, match="suffix"):
+        model.channel_from_scores(score)
+    score[0, :] = 1
+    with pytest.raises(ValueError, match="exactly one EOS"):
+        model.channel_from_scores(score)
+
+
+def test_eos_training_and_reload(tmp_path):
+    from roboscore.evaluate import run
+
+    report = train(
+        tmp_path / "eos",
+        epochs=1,
+        train_count=6,
+        val_count=6,
+        test_count=6,
+        batch_size=6,
+        threads=2,
+        variable=True,
+    )
+    reevaluated = run(tmp_path / "eos")
+    assert report["summary"]["test"] == reevaluated
+    assert 1 <= reevaluated["mean_length"] <= 32

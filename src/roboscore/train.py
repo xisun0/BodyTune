@@ -52,8 +52,8 @@ def predict(model, a, b, shuffle=False):
         if shuffle:
             # Different demonstration messages, same receiver initial states.
             perm = torch.arange(len(channel)).roll(1)
-            channel = channel[perm]
-        q = model.performer(channel, b[start : start + 64, 0])
+            ids = ids[perm]
+        q = model.decode(ids, b[start : start + 64, 0])
         outputs.append(q)
         scores.append(ids)
     return torch.cat(outputs), torch.cat(scores)
@@ -86,7 +86,18 @@ def evaluate(q, b, ids, config):
         "mean_rmse": float(rmse.mean()),
         "max_point_error": float(error.max()),
         "distinct_scores": len(np.unique(ids.numpy(), axis=0)),
-        "symbols_used": np.unique(ids.numpy()).tolist(),
+        "symbols_used": np.unique(
+            ids.numpy()[(ids.numpy() >= 0) & (ids.numpy() < config.symbols)]
+        ).tolist(),
+        "mean_length": float(((ids >= 0) & (ids < config.symbols)).sum(-1).float().mean()),
+        "length_histogram": {
+            str(int(n)): int(c)
+            for n, c in zip(
+                *np.unique(
+                    ((ids >= 0) & (ids < config.symbols)).sum(-1).numpy(), return_counts=True
+                )
+            )
+        },
     }
 
 
@@ -99,6 +110,9 @@ def train(
     seed=123,
     batch_size=64,
     threads=4,
+    variable=False,
+    length_weight=0.01,
+    init_checkpoint=None,
 ):
     if min(epochs, train_count, val_count, test_count, batch_size, threads) < 1:
         raise ValueError("counts, epochs, batch size and threads must be positive")
@@ -108,7 +122,9 @@ def train(
     torch.manual_seed(seed)
     torch.use_deterministic_algorithms(True)
     np.random.seed(seed)
-    config = ModelConfig()
+    if length_weight < 0:
+        raise ValueError("negative length penalty")
+    config = ModelConfig(variable=variable)
     splits = {
         name: dataset(count, seed + offset, config)
         for name, count, offset in [
@@ -125,6 +141,27 @@ def train(
         generator=torch.Generator().manual_seed(seed),
     )
     model = MotionModel(config)
+    initial = None
+    if init_checkpoint is not None:
+        checkpoint = torch.load(init_checkpoint, weights_only=True)
+        old = ModelConfig(**checkpoint["config"])
+        if asdict(old) | {"variable": variable} != asdict(config):
+            raise ValueError("incompatible initialization configuration")
+        weights = checkpoint["model"]
+        if variable and not old.variable:
+            weights = dict(weights)
+            for suffix in ("weight", "bias"):
+                key = "notator.head." + suffix
+                expanded = model.state_dict()[key].clone()
+                expanded[: config.symbols] = weights[key]
+                expanded[-1] = 0 if suffix == "weight" else -0.5
+                weights[key] = expanded
+        model.load_state_dict(weights)
+        initial = {
+            "path": str(init_checkpoint),
+            "epoch": checkpoint["epoch"],
+            "sha256": hashlib.sha256(Path(init_checkpoint).read_bytes()).hexdigest(),
+        }
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     best, history, best_epoch = float("inf"), [], 0
     started = time.monotonic()
@@ -135,6 +172,8 @@ def train(
             optimizer.zero_grad()
             q, _ = model(a_batch, b_batch[:, 0], max(0.4, 1 - epoch / epochs * 0.6))
             loss = objective(q, b_batch)
+            if variable:
+                loss = loss + length_weight * model.notator.mean_length / config.tokens
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
@@ -143,12 +182,15 @@ def train(
         q, ids = predict(model, va, vb)
         validation = evaluate(q, vb, ids, config)
         score = validation["mean_nrmse"] + (1 - validation["feasible_rate"])
+        if variable:
+            score += length_weight * validation["mean_length"] / config.tokens
         history.append(
             {
                 "epoch": epoch,
                 "train_loss": total / train_count,
                 "val_nrmse": validation["mean_nrmse"],
                 "selection_score": score,
+                "val_length": validation["mean_length"],
             }
         )
         if score < best:
@@ -196,6 +238,8 @@ def train(
             "threads": threads,
             "seconds": time.monotonic() - started,
             "parameters": sum(p.numel() for p in model.parameters()),
+            "length_weight": length_weight if variable else 0,
+            "initialization": initial,
         },
         "splits": {
             name: {"count": len(values[0]), "seed": seed + i, "sampling": values[3]}
@@ -228,6 +272,11 @@ def main():
     parser.add_argument("--seed", type=int, default=123)
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--threads", type=int, default=4)
+    parser.add_argument(
+        "--variable", action="store_true", help="8 motion symbols plus EOS, capacity 32"
+    )
+    parser.add_argument("--length-weight", type=float, default=0.01)
+    parser.add_argument("--init-checkpoint", type=Path)
     train(**vars(parser.parse_args()))
 
 

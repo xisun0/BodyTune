@@ -87,3 +87,20 @@ Train/validation/test use separate seeded trajectory draws (default 1,200/240/24
 Runs save `best.pt`, `history.csv`, `test_rollouts.npz` (hard scores and actual joint rollouts), and `report.json` with split seeds, configuration, checkpoint epoch, parameter count, metrics and source provenance. Default execution is CPU with four threads. Generated models and data remain outside Git.
 
 Initial learned results and limitations: [learning experiments](docs/learning-results.md).
+
+## EOS-terminated variable motion scores
+
+```bash
+.venv-roboscore/bin/roboscore-train --output outputs/eos32 --variable \
+  --init-checkpoint outputs/fixed32/best.pt --epochs 40 --length-weight 0.01
+.venv-roboscore/bin/python -m roboscore.evaluate outputs/eos32
+ROBOSCORE_RUN=outputs/eos32 .venv-roboscore/bin/python figures/learning.py
+```
+
+The payload still uses **8 motion symbols (IDs 0–7)**. EOS is a separate control symbol (ID 8), and `-1` is storage padding, never a transmitted motion symbol. Scores contain 1–32 motion symbols followed by exactly one EOS; reaching the capacity forces a terminal EOS. A batch stores at most 33 entries. The Performer discards EOS and padding, and reconstructs the same zero-padded payload representation solely from the transmitted integers. All evaluation goes through this integer transport interface.
+
+This first variable-length extension predicts candidate slots in parallel and truncates at the **first learned EOS**. It is not an autoregressive score decoder. A differentiable straight-through survival mask blocks every slot at/after EOS, so neither content nor gradients through motion embeddings can bypass termination. Soft termination probabilities provide gradient information to the EOS decision. A length penalty (`weight × payload_length/32`) trades drawing error against shorter messages. Report actual hard-message length histograms; supporting EOS does not guarantee that training discovers useful variable lengths.
+
+The optional warm start copies the fixed model and adds an EOS output row. Variable training is additional optimization with a fresh optimizer, not an equal-compute comparison with fixed training. Training and validation selection include the length term. Termination length itself carries information; a shorter average payload is not a complete entropy/bit-budget comparison. `--variable` also supports training from scratch.
+
+Reload evaluation for either mode with `.venv-roboscore/bin/python -m roboscore.evaluate outputs/fixed32`. This reloads `best.pt`, reads only the saved test demonstrations/receiver initial states, and recomputes integer-message rollouts; saved predictions are not reused as results.
