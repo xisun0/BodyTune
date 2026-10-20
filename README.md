@@ -1,10 +1,35 @@
 # BodyTune
 
-BodyTune asks: **How can a pretrained generalist robot policy rapidly identify and adapt to a modified or degraded embodiment using minimal real-world interaction?**
+BodyTune asks: **How can a robot learn its body from the sensory consequences of its own actions?**
+
+## Immediate Phase-0 question
+
+The first controlled experiment is deliberately narrower than policy adaptation:
+
+> Can an SO-101 detect and localize a silently disabled joint using only the
+> proprioceptive and visual consequences of small, safe probing actions?
+
+Phase 0 first establishes deterministic probing, structured provenance, and an
+interpretable non-learning diagnostic. ACT, SmolVLA, reinforcement learning,
+pressure sensing, and learned self-models are deferred until the sensorimotor
+signal is measurable and reproducible.
+
+The initial implementation lives in `src/bodytune/discovery/`. It operates on an
+already connected LeRobot robot object but never connects or moves hardware on
+construction. A probe is rejected unless it is explicitly armed and confirmed,
+and LeRobot's `max_relative_target` safety limit must also be active.
+Non-finite joint observations and safety settings are rejected. A failed or
+out-of-tolerance return blocks further probes on that runner; inspect the
+hardware before creating a new runner. These safeguards have unit-test coverage
+with a fake robot; live hardware behavior has not been validated.
+
+The longer-run question remains how a pretrained generalist robot policy can
+rapidly identify and adapt to a modified or degraded embodiment using minimal
+real-world interaction.
 
 Our hypothesis is that foundation policies should retain general skills and world knowledge, while a small machine-specific component learns the body available after deployment.
 
-## First architecture
+## Later adaptation architecture
 
 The first proof of concept keeps the pretrained VLA frozen:
 
@@ -28,7 +53,7 @@ The residual body adapter will be small, independently trainable, saveable, load
 
 The currently inspected LeRobot integration point is pinned in `pyproject.toml`. Before any real run, the SmolVLA Hub revision and the local robot/calibration identity must also be pinned in the run metadata. See `configs/provenance.example.yaml` and `docs/environment-audit.md`.
 
-## First proof of concept
+## Later policy-adaptation proof of concept
 
 The first controlled embodiment shift is software-only:
 

@@ -1,0 +1,24 @@
+# Portable example only. Copy into an untracked local/run configuration before use.
+# No command in BodyTune currently connects to or moves the robot automatically.
+name: phase0_sensorimotor_probe
+
+robot:
+  id: my_follower
+  type: so101_follower
+  max_relative_target: 2.0
+
+probe:
+  joint: wrist_roll
+  command_magnitude: 2.0
+  settle_s: 0.25
+  timeout_s: 1.0
+  return_tolerance: 1.0
+  max_session_deviation: 5.0
+  boundary_margin: 1.0
+  directions: [-1, 1]
+  repetitions: 3
+
+safety:
+  require_explicit_arm: true
+  require_confirmation_per_probe: true
+  autonomous_motion: false
