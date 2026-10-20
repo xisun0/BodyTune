@@ -54,3 +54,7 @@ Evaluate the actual integrated rollout using start-aligned, ordered sample posit
 `outputs/baseline/` contains the paired demonstrations and executed trajectories (`trajectories.npz`), per-pair metrics (`metrics.csv`), and configuration, rejection counts, aggregate metrics, Git revision/dirty state and lockfile hash (`report.json`). Raw trajectories and shape labels are baseline/evaluation data; they are not an approved input interface for a future learned Performer. These samples are not yet a structural train/validation/test split.
 
 The figure script writes `figures/baseline.png`, vector `baseline.pdf`, and `arms.png`/`arms.pdf`. To visualize a different run, set `ROBOSCORE_RUN=outputs/your-run`. Figures show aligned geometry and an example of distinct A/B configurations. Generated artifacts remain untracked; summarized reproducible results belong in `docs/`.
+
+## Verified baseline result
+
+The first clean-revision run evaluated 1,200 pairs (seed 42): the full-curve IK oracle reproduced all drawings to numerical precision; joint-increment copying met the drawing criterion in none of the pairs, with 16 constraint-invalid rollouts. See [results and limitations](docs/baseline-results.md) and the [machine-readable report](docs/results/baseline-seed42.json). This establishes the analytic reproduction pipeline, not a learned motion language.

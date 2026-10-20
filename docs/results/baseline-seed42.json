@@ -1,0 +1,54 @@
+{
+  "config": {
+    "count": 1200,
+    "steps": 96,
+    "seed": 42,
+    "dt": 0.05,
+    "arm": {
+      "lengths": [
+        1.0,
+        1.0
+      ],
+      "lower": [
+        -3.141592653589793,
+        -2.9
+      ],
+      "upper": [
+        3.141592653589793,
+        2.9
+      ],
+      "max_speed": 2.0,
+      "singularity_margin": 0.05
+    }
+  },
+  "sampling": {
+    "attempted": 1640,
+    "rejected": 440
+  },
+  "summary": {
+    "ik_oracle": {
+      "pairs": 1200,
+      "feasible": 1200,
+      "success_rate": 1.0,
+      "mean_nrmse_feasible": 2.9518802605290003e-16,
+      "max_error_feasible": 1.2560739669470201e-15
+    },
+    "joint_copy": {
+      "pairs": 1200,
+      "feasible": 1184,
+      "success_rate": 0.0,
+      "mean_nrmse_feasible": 0.36107237673859693,
+      "max_error_feasible": 1.5386021958070215
+    }
+  },
+  "provenance": {
+    "revision": "7d03086e4f4d424177733abfcc8ab02ba5433bd2",
+    "dirty": false,
+    "python": "3.10.14",
+    "numpy": "2.2.6",
+    "lock_sha256": "e0675eb7da1e98c8e7eb272a3d51c496002535b9fc82bc9d60d6f76555931f39"
+  },
+  "semantics": "Start-aligned ordered geometry, no rotation or scale alignment.",
+  "success": "Feasible sampled rollout and RMSE/path_length <= 0.01.",
+  "limitation": "Full-curve oracle, no discrete score; constraints at sampled times only."
+}
