@@ -146,3 +146,20 @@ The Notator/Performer architecture and geometry objective are retained with `tok
 First circle-only result: stopped at epoch **254**, selected epoch **214**. Test mean NRMSE **0.01691**, strict success **17.92%**, all rollouts feasible. Shuffling the message raises mean NRMSE to **0.07952**. The model uses five symbols associated with different diameter ranges; it has learned a coarse scale communication but has not solved accurate continuous-diameter reproduction. [Detailed circle results](docs/circle-experiment.md).
 
 Run `.venv-roboscore/bin/python figures/circles.py` to generate the training preview, a CSV index of all 1,200 demonstrations, test inference plots, diameter/token associations, and same-state token interventions. Artifacts are written to `outputs/circles1/`; `ROBOSCORE_RUN` selects another circle run.
+
+## Exact-diameter Performer capacity control (no Notator)
+
+```bash
+.venv-roboscore/bin/python -m roboscore.capacity --source outputs/circles1 \
+  --output outputs/diameter_capacity/gru64 --hidden 64
+.venv-roboscore/bin/python -m roboscore.capacity --source outputs/circles1 \
+  --output outputs/diameter_capacity/gru128 --hidden 128
+.venv-roboscore/bin/python -m roboscore.capacity --source outputs/circles1 \
+  --output outputs/diameter_capacity/gru256 --hidden 256
+```
+
+These controls read the **same saved 1,200/240/240 circle demonstrations**, without regeneration. SHA-256 hashes identify every source split. The receiver gets the exact scalar diameter in link units and its own initial joint angles; there is no Notator, discrete token, source trajectory input, IK correction or hand-coded circular controller. A scalar Linear–Tanh conditioner replaces the token embedding, then reuses the original GRU rollout, time inputs, bounded action head and geometry/constraint/smoothness objective.
+
+Each width (64/128/256) starts from scratch with seed 123, Adam lr=0.001, batch size 64, clipping 1, CPU four threads, maximum 300 epochs, minimum 80 and validation patience 40. The larger hidden state also enlarges its conditioning, initialization and action layers. Epoch and stopping budgets match; parameter counts, initialization realizations and FLOPs do not. This is a single-seed diagnostic of the controller, not a test of autonomous notation discovery.
+
+Validation selects the checkpoint using the same mean NRMSE plus infeasible fraction criterion. Test evaluation includes correct diameters, shuffled diameters and a fixed training-mean diameter. `best.pt`/`last.pt` retain optimizer/RNG state; `history.csv`, `test_rollouts.npz` and `report.json` record results and source provenance. To reload and verify a finished run, add `--evaluate` to its command; dataset hash changes cause refusal rather than evaluating on different data.

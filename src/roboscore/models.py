@@ -92,6 +92,10 @@ class Performer(nn.Module):
 
     def forward(self, channel, q0):
         context = self.message((channel @ self.embedding).flatten(1))
+        return self.rollout(context, q0)
+
+    def rollout(self, context, q0):
+        """Integrate the policy with a fixed conditioning context and live joint state."""
         q = q0
         state = torch.tanh(self.initial(torch.cat((context, q.sin(), q.cos()), -1)))
         states = [q]
@@ -145,3 +149,17 @@ class MotionModel(nn.Module):
     def forward(self, a, q0, temperature=1.0):
         channel, ids = self.notator(features(a, self.config.dt), temperature)
         return self.performer(channel, q0), ids
+
+
+class DiameterPerformer(Performer):
+    """Diagnostic policy: an exact continuous diameter replaces the discrete message."""
+
+    def __init__(self, config):
+        super().__init__(config)
+        del self.embedding
+        self.message = nn.Sequential(nn.Linear(1, config.hidden), nn.Tanh())
+
+    def forward(self, diameter, q0):
+        if diameter.ndim != 1 or len(diameter) != len(q0):
+            raise ValueError("expected one diameter per initial state")
+        return self.rollout(self.message(diameter[:, None]), q0)
