@@ -68,3 +68,20 @@ The first clean-revision run evaluated 1,200 pairs (seed 42): the full-curve IK 
 This renders a feasible circle example as three synchronized panels: A, B with the full-curve IK oracle, and B copying A's joint increments. Orange links show the complete base–elbow–tip posture; blue traces show the executed pen path; gray curves show each robot's intended drawing. All panels use the same world-coordinate scale. Joint angles and simulation time are displayed. Outputs are `figures/arm_motion.gif`, a self-contained `arm_motion.html` with playback/scrubbing controls, and `posture_midpoint.png`. Set `ROBOSCORE_RUN` to choose another run.
 
 Frames use recorded joint states at the run's sampling interval, with no dynamics or interpolated physics simulation. The oracle receives the full curve, not learned symbols.
+
+## Learned fixed-length motion communication
+
+```bash
+UV_PROJECT_ENVIRONMENT=.venv-roboscore uv sync --frozen
+.venv-roboscore/bin/roboscore-train --output outputs/fixed32 --epochs 60
+```
+
+The Notator receives 96 steps of `[q1/pi, q2/pi, velocity1/2, velocity2/2, relative_x/2, relative_y/2]`. A 2-layer Transformer (hidden 64, 4 heads, feedforward 256, dropout 0) and 32 learned attention queries emit **32 tokens from 8 symbols** (96 nominal bits). Training uses deterministic straight-through argmax with a temperature-annealed soft backward approximation; inference sends exact integer symbols. This differs from the proposal's optional stochastic Gumbel estimator.
+
+The Performer embeds the ordered message into a 64-dimensional context. A 64-dimensional GRUCell receives that context, sine/cosine of B's current angles, and normalized execution progress. It emits bounded increments (at most 0.1 rad per joint at dt=0.05 s). The recurrent rollout starts at B's actual initial state. Neither A's trajectory, target coordinates, shape labels nor B's target actions enter the Performer. The known fixed time horizon is shared protocol information.
+
+Joint training uses differentiable unit-link forward kinematics and start-aligned, path-length-normalized squared drawing error, plus joint-limit, singularity-margin and weak acceleration penalties. No IK action imitation or primitive labels are used. Velocity is hard-bounded by the action head; other constraints are penalized in training and checked strictly in evaluation.
+
+Train/validation/test use separate seeded trajectory draws (default 1,200/240/240). These are IID parameter variations of the same six shape templates, **not held-out structural compositions**. Select the best checkpoint by validation mean NRMSE plus infeasible fraction, then evaluate test data once. Compare against shuffled messages and a stationary receiver. A fixed 32-token representation does not assign token positions to motion segments and does not establish grammar.
+
+Runs save `best.pt`, `history.csv`, `test_rollouts.npz` (hard scores and actual joint rollouts), and `report.json` with split seeds, configuration, checkpoint epoch, parameter count, metrics and source provenance. Default execution is CPU with four threads. Generated models and data remain outside Git.

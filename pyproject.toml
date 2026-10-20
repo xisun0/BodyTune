@@ -7,7 +7,7 @@ name = "roboscore"
 version = "0.1.0"
 description = "Executable motion notation: planar-arm communication benchmarks"
 requires-python = ">=3.10"
-dependencies = ["numpy>=1.26,<3", "matplotlib>=3.8,<4"]
+dependencies = ["numpy>=1.26,<3", "matplotlib>=3.8,<4", "torch==2.7.1"]
 
 [dependency-groups]
 dev = ["pytest>=8,<10", "ruff>=0.9"]
@@ -20,6 +20,7 @@ testpaths = ["tests"]
 
 [project.scripts]
 roboscore-benchmark = "roboscore.benchmark:main"
+roboscore-train = "roboscore.train:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/roboscore"]
