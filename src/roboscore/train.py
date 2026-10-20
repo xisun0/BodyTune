@@ -111,6 +111,7 @@ def train(
     batch_size=64,
     threads=4,
     variable=False,
+    tokens=32,
     length_weight=0.01,
     init_checkpoint=None,
 ):
@@ -124,7 +125,7 @@ def train(
     np.random.seed(seed)
     if length_weight < 0:
         raise ValueError("negative length penalty")
-    config = ModelConfig(variable=variable)
+    config = ModelConfig(variable=variable, tokens=tokens)
     splits = {
         name: dataset(count, seed + offset, config)
         for name, count, offset in [
@@ -193,12 +194,24 @@ def train(
                 "val_length": validation["mean_length"],
             }
         )
-        if score < best:
+        improved = score < best
+        if improved:
             best, best_epoch = score, epoch
-            torch.save(
-                {"config": asdict(config), "model": model.state_dict(), "epoch": epoch},
-                output / "best.pt",
-            )
+        state = {
+            "config": asdict(config),
+            "model": model.state_dict(),
+            "epoch": epoch,
+            "optimizer": optimizer.state_dict(),
+            "torch_rng": torch.get_rng_state(),
+            "loader_rng": loader.generator.get_state(),
+            "history": history,
+            "best_score": best,
+            "best_epoch": best_epoch,
+            "temperature_horizon": epochs,
+        }
+        torch.save(state, output / "last.pt")
+        if improved:
+            torch.save(state, output / "best.pt")
         if epoch == 1 or epoch % 5 == 0 or epoch == epochs:
             print(json.dumps(history[-1]), flush=True)
     checkpoint = torch.load(output / "best.pt", weights_only=True)
@@ -266,6 +279,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--epochs", type=int, default=60)
+    parser.add_argument("--tokens", type=int, default=32, help="Motion score capacity")
     parser.add_argument("--train-count", type=int, default=1200)
     parser.add_argument("--val-count", type=int, default=240)
     parser.add_argument("--test-count", type=int, default=240)
@@ -273,7 +287,9 @@ def main():
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--threads", type=int, default=4)
     parser.add_argument(
-        "--variable", action="store_true", help="8 motion symbols plus EOS, capacity 32"
+        "--variable",
+        action="store_true",
+        help="8 motion symbols plus EOS, capacity set by --tokens",
     )
     parser.add_argument("--length-weight", type=float, default=0.01)
     parser.add_argument("--init-checkpoint", type=Path)

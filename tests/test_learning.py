@@ -107,3 +107,26 @@ def test_eos_training_and_reload(tmp_path):
     reevaluated = run(tmp_path / "eos")
     assert report["summary"]["test"] == reevaluated
     assert 1 <= reevaluated["mean_length"] <= 32
+
+
+def test_96_token_training_and_checkpoint_state(tmp_path):
+    from roboscore.evaluate import run
+
+    report = train(
+        tmp_path / "fixed96",
+        epochs=1,
+        train_count=6,
+        val_count=6,
+        test_count=6,
+        batch_size=6,
+        threads=2,
+        tokens=96,
+    )
+    assert report["config"]["tokens"] == 96
+    assert report["summary"]["test"]["mean_length"] == 96
+    checkpoint = torch.load(tmp_path / "fixed96" / "last.pt", weights_only=True)
+    assert checkpoint["optimizer"]["state"]
+    assert checkpoint["torch_rng"].numel() > 0
+    assert checkpoint["loader_rng"].numel() > 0
+    assert checkpoint["temperature_horizon"] == 1
+    assert run(tmp_path / "fixed96")["mean_length"] == 96

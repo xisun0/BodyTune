@@ -113,3 +113,15 @@ Both learning modes have completed training and checkpoint-reload evaluation. Fi
 ## Single-example checkpoint inference
 
 Run `.venv-roboscore/bin/python figures/inference.py` after both training runs. It reloads both checkpoints and uses the first circle in the saved test split (index 3), without selecting by error. The receiver gets only integer scores and its initial angles. Outputs in `outputs/inference/` include `example.json` (actual messages and errors), `inference.png` (aligned target/prediction) and `inference.gif` (full arm postures). No optimization or IK correction is performed during this inference.
+
+## 96-token capacity experiment
+
+```bash
+.venv-roboscore/bin/roboscore-train --output outputs/fixed96 --tokens 96 --epochs 60
+.venv-roboscore/bin/python -m roboscore.evaluate outputs/fixed96
+ROBOSCORE_RUN=outputs/fixed96 .venv-roboscore/bin/python figures/learning.py
+```
+
+This experiment retains 8 symbols and the same 96-sample trajectories, seed, splits, optimizer and 60-epoch budget as fixed32. The channel increases from 96 to 288 nominal bits. **96 tokens does not impose one token per motion step**: learned attention queries still read the entire demonstration, and the Performer receives the complete score. The message projection and query parameter counts grow, so this is not a parameter-matched comparison. It tests a larger message capacity, not an explicit temporally aligned grammar.
+
+New runs save `last.pt` as well as `best.pt`, including optimizer state, Torch and data-loader RNG states, epoch/history, validation-selection state and the temperature schedule horizon. `--init-checkpoint` remains a weights-only warm start with a new optimizer; it is not an exact-resume command. The stored state supports implementing a proper continuation without losing optimizer history later.
