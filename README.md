@@ -33,3 +33,24 @@ UV_PROJECT_ENVIRONMENT=.venv-roboscore uv run roboscore-benchmark --help
 ```
 
 The baseline needs only CPU, NumPy and Matplotlib. PyTorch is deliberately deferred until model training. `uv.lock` pins the resolved environment. Generated outputs, virtual environments and machine-local files are excluded from Git.
+
+## Run the analytic benchmark
+
+From the repository root (each run needs a new output directory):
+
+```bash
+.venv-roboscore/bin/pytest -q
+.venv-roboscore/bin/roboscore-benchmark --output outputs/baseline --count 1200 --seed 42
+.venv-roboscore/bin/python figures/benchmark.py
+```
+
+The default is 96 samples at 0.05 seconds per step. Six drawing families are balanced: square, rectangle, triangle, circle, arc and polyline. Scale, orientation, direction, initial positions and elbow branches vary. Fixed seeds reproduce sampling. Rejection sampling accepts a pair only if both complete trajectories meet joint bounds, per-joint speed limits and a singularity margin. Accepted initial joint vectors differ by at least 0.3 radians in Euclidean norm. Rejected attempts are counted; feasibility conditioning means the accepted distribution is not uniform over all curves and initial states.
+
+- **Full-curve IK oracle:** transmit A's full relative pen curve, solve on B's initial elbow branch, then integrate joint-increment commands from B's state.
+- **Joint-copy control:** apply A's joint increments directly from B's initial configuration. Invalid executions count as failures and are not drawn as valid paths.
+
+Evaluate the actual integrated rollout using start-aligned, ordered sample positions. Success requires a feasible rollout and positional RMSE divided by target path length ≤ 0.01. No rotation, rescaling, or dynamic time warping is applied. Feasibility is checked at sampled times; continuous-time dynamics, contact, collision and acceleration bounds are outside this benchmark.
+
+`outputs/baseline/` contains the paired demonstrations and executed trajectories (`trajectories.npz`), per-pair metrics (`metrics.csv`), and configuration, rejection counts, aggregate metrics, Git revision/dirty state and lockfile hash (`report.json`). Raw trajectories and shape labels are baseline/evaluation data; they are not an approved input interface for a future learned Performer. These samples are not yet a structural train/validation/test split.
+
+The figure script writes `figures/baseline.png`, vector `baseline.pdf`, and `arms.png`/`arms.pdf`. To visualize a different run, set `ROBOSCORE_RUN=outputs/your-run`. Figures show aligned geometry and an example of distinct A/B configurations. Generated artifacts remain untracked; summarized reproducible results belong in `docs/`.
