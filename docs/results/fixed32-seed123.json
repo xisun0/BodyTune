@@ -1,0 +1,111 @@
+{
+  "config": {
+    "steps": 96,
+    "tokens": 32,
+    "symbols": 8,
+    "hidden": 64,
+    "dt": 0.05
+  },
+  "training": {
+    "epochs": 60,
+    "seed": 123,
+    "batch_size": 64,
+    "best_epoch": 60,
+    "threads": 4,
+    "seconds": 80.55527041712776,
+    "parameters": 172938
+  },
+  "splits": {
+    "train": {
+      "count": 1200,
+      "seed": 123,
+      "sampling": {
+        "attempted": 1594,
+        "rejected": 394
+      }
+    },
+    "val": {
+      "count": 240,
+      "seed": 124,
+      "sampling": {
+        "attempted": 344,
+        "rejected": 104
+      }
+    },
+    "test": {
+      "count": 240,
+      "seed": 125,
+      "sampling": {
+        "attempted": 312,
+        "rejected": 72
+      }
+    }
+  },
+  "summary": {
+    "test": {
+      "count": 240,
+      "feasible_rate": 1.0,
+      "success_rate": 0.0,
+      "mean_nrmse": 0.20745538175106049,
+      "median_nrmse": 0.1871710568666458,
+      "mean_rmse": 0.18370488286018372,
+      "max_point_error": 0.6497706174850464,
+      "distinct_scores": 80,
+      "symbols_used": [
+        0,
+        1,
+        2,
+        3,
+        5,
+        6,
+        7
+      ]
+    },
+    "shuffled_message": {
+      "count": 240,
+      "feasible_rate": 1.0,
+      "success_rate": 0.0,
+      "mean_nrmse": 0.3151955306529999,
+      "median_nrmse": 0.2849515378475189,
+      "mean_rmse": 0.2657177746295929,
+      "max_point_error": 0.7767491936683655,
+      "distinct_scores": 80,
+      "symbols_used": [
+        0,
+        1,
+        2,
+        3,
+        5,
+        6,
+        7
+      ]
+    },
+    "stationary": {
+      "count": 240,
+      "feasible_rate": 1.0,
+      "success_rate": 0.0,
+      "mean_nrmse": 0.2867749333381653,
+      "median_nrmse": 0.2324298918247223,
+      "mean_rmse": 0.24365203082561493,
+      "max_point_error": 0.6985000371932983,
+      "distinct_scores": 80,
+      "symbols_used": [
+        0,
+        1,
+        2,
+        3,
+        5,
+        6,
+        7
+      ]
+    }
+  },
+  "provenance": {
+    "revision": "f24814dda5e0f3fa9d8cdc52537beb3c91bb16f2",
+    "dirty": false,
+    "torch": "2.7.1",
+    "python": "3.10.14",
+    "lock_sha256": "f62eeef11f8f0cc26d03f5f151cebe66bbac093ada6ee8dce9dbdfef9b010a80"
+  },
+  "limits": "Independent seeded IID draws, not held-out structural compositions. No proof of grammar. CPU, unit links, fixed sampling progress. Straight-through argmax training; hard integer messages at evaluation."
+}

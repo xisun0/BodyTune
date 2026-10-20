@@ -20,7 +20,7 @@ Phase 1 establishes discrete communication (initially four tokens from a 16-symb
 
 ## Current implementation scope
 
-The first milestone is an analytic NumPy benchmark: forward/inverse kinematics, continuous feasible trajectories, and A/B reproduction through conventional IK. This is an oracle/control baseline with access to the full relative target curve, **not a learned score or evidence of a language**. Learned Notator/Performer models and matched bit-budget compression baselines are later work.
+The first milestone is an analytic NumPy benchmark: forward/inverse kinematics, continuous feasible trajectories, and A/B reproduction through conventional IK. This is an oracle/control baseline with access to the full relative target curve, **not a learned score or evidence of a language**. A learned fixed-message Notator/Performer is now implemented below. Matched bit-budget compression baselines remain future work.
 
 ## Independent environment
 
@@ -32,7 +32,7 @@ UV_PROJECT_ENVIRONMENT=.venv-roboscore uv run pytest
 UV_PROJECT_ENVIRONMENT=.venv-roboscore uv run roboscore-benchmark --help
 ```
 
-The baseline needs only CPU, NumPy and Matplotlib. PyTorch is deliberately deferred until model training. `uv.lock` pins the resolved environment. Generated outputs, virtual environments and machine-local files are excluded from Git.
+The analytic baseline needs only CPU, NumPy and Matplotlib; the independent environment now also pins PyTorch for model training. `uv.lock` pins the resolved environment. Generated outputs, virtual environments and machine-local files are excluded from Git.
 
 ## Run the analytic benchmark
 
@@ -85,3 +85,5 @@ Joint training uses differentiable unit-link forward kinematics and start-aligne
 Train/validation/test use separate seeded trajectory draws (default 1,200/240/240). These are IID parameter variations of the same six shape templates, **not held-out structural compositions**. Select the best checkpoint by validation mean NRMSE plus infeasible fraction, then evaluate test data once. Compare against shuffled messages and a stationary receiver. A fixed 32-token representation does not assign token positions to motion segments and does not establish grammar.
 
 Runs save `best.pt`, `history.csv`, `test_rollouts.npz` (hard scores and actual joint rollouts), and `report.json` with split seeds, configuration, checkpoint epoch, parameter count, metrics and source provenance. Default execution is CPU with four threads. Generated models and data remain outside Git.
+
+Initial learned results and limitations: [learning experiments](docs/learning-results.md).
