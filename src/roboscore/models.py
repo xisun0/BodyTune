@@ -97,11 +97,13 @@ class Performer(nn.Module):
     def rollout(self, context, q0):
         """Integrate the policy with a fixed conditioning context and live joint state."""
         q = q0
-        state = torch.tanh(self.initial(torch.cat((context, q.sin(), q.cos()), -1)))
+        first_context = context if context.ndim == 2 else context[:, 0]
+        state = torch.tanh(self.initial(torch.cat((first_context, q.sin(), q.cos()), -1)))
         states = [q]
         for t in range(self.config.steps - 1):
+            current_context = context if context.ndim == 2 else context[:, t]
             progress = q.new_full((len(q), 1), t / (self.config.steps - 1))
-            inputs = torch.cat((context, q.sin(), q.cos(), progress, progress**2), -1)
+            inputs = torch.cat((current_context, q.sin(), q.cos(), progress, progress**2), -1)
             state = self.cell(inputs, state)
             delta = torch.tanh(self.action(state)) * (2 * self.config.dt)
             q = q + delta

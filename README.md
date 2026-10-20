@@ -167,3 +167,22 @@ Validation selects the checkpoint using the same mean NRMSE plus infeasible frac
 After all three capacity runs finish, `.venv-roboscore/bin/python figures/capacity.py` verifies matching dataset hashes and test examples, then saves comparison JSON, validation curves and diameter-ordered inference overlays under `outputs/diameter_capacity/`. Additional least-squares circle fits report circularity, diameter error, closure and completed turns separately from the original ordered-trajectory success criterion; degenerate paths are excluded from fit-dependent metrics and counted explicitly.
 
 Completed exact-diameter capacity results (same saved 1,200 training circles): GRU64 **0.008323 / 79.58%**, GRU128 **0.005544 / 92.92%**, GRU256 **0.004682 / 92.92%** (test mean NRMSE / strict success). All correct-diameter rollouts were feasible. Widths 64/128 ran 300 epochs; 256 stopped at 224 under validation patience. Capacity improves precision, but the 64-dimensional controller already learns accurate execution for most examples when the exact diameter is available. The earlier problem is not solely model size. [Detailed capacity results and limitations](docs/performer-capacity.md).
+
+## Global 1 token versus 95 action-aligned local tokens (GRU128)
+
+```bash
+.venv-roboscore/bin/python -m roboscore.aligned --source outputs/circles1 \
+  --output outputs/aligned128/global1 --mode global
+.venv-roboscore/bin/python -m roboscore.aligned --source outputs/circles1 \
+  --output outputs/aligned128/local95 --mode local
+```
+
+Both arms read the **same saved 1,200/240/240 circle splits**, with identical hashes. The source observation is the 95 successive **end-effector displacements**, computed by FK from A's recorded joint states. The encoder never receives joint increments, A/B joint angles, diameter labels, absolute endpoint positions or time indices. A fixed 0.05-link-unit scale normalizes each displacement.
+
+For this new matched comparison, both Notators use the same pointwise 2→64→64 ReLU trunk and 64→8 head. The global arm averages the 95 hidden feature vectors before emitting one symbol. The local arm applies the head at each step to emit 95 symbols; each local symbol depends only on its corresponding displacement. This replaces the older Transformer baseline in **both** arms so their parameter shapes/counts and seeded initial weights match exactly. The global pooling baseline is appropriate to this fixed-phase circle task, not an order-preserving encoder for arbitrary drawings.
+
+Both Performers are the same 128-unit GRU with an 8-symbol embedding. At action step t, the global model reads its one symbol again; the local model reads **only symbol t**, plus current receiver state, shared progress and recurrent state. Initialization uses the receiver state and the first available symbol. Future tokens cannot influence earlier actions. The exact-diameter baseline is not used for initialization or inference.
+
+Both train from scratch with seed 123, Adam lr=0.001, batch size 64, clipping 1, maximum 300/minimum 80 epochs, validation patience 40, the same geometry/constraint/smoothness objective and deterministic straight-through discrete training. No teacher actions, token labels, circle primitives or extra losses are introduced. Evaluation transmits integer IDs only, and includes cross-demonstration message shuffling and a fixed temporal permutation (the latter is an identity control for the one-token arm). Add `--evaluate` to reload a completed run and verify source hashes.
+
+**Interpretation boundary:** the global channel has 3 nominal bits; the local channel has 285. Even with identical model parameters, this compares alignment **and** message capacity, not locality alone. The Performer has a shared phase clock, and the dataset contains only fixed-phase circles. Local token input restrictions do not themselves establish reusable motion semantics, composition or editing.
