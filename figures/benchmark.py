@@ -40,7 +40,7 @@ def main():
                 xlabel="Relative x (link units)",
                 ylabel="Relative y (link units)",
             )
-            ax.set_aspect("equal", adjustable="datalim")
+            ax.set_aspect("equal", adjustable="box")
         axes.flat[0].legend(fontsize=8, frameon=False)
         fig.savefig(OUT / "baseline.png", dpi=180)
         fig.savefig(OUT / "baseline.pdf")
