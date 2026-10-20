@@ -1,0 +1,121 @@
+{
+  "config": {
+    "steps": 96,
+    "tokens": 32,
+    "symbols": 8,
+    "hidden": 64,
+    "dt": 0.05,
+    "variable": true
+  },
+  "training": {
+    "epochs": 40,
+    "seed": 123,
+    "batch_size": 64,
+    "best_epoch": 36,
+    "threads": 4,
+    "seconds": 52.07285291701555,
+    "parameters": 173003,
+    "length_weight": 0.01,
+    "initialization": {
+      "path": "outputs/fixed32/best.pt",
+      "epoch": 60,
+      "sha256": "d6e9e0813ade071bfec79858f4d91887287d799d43c573f0e37b8d5034b700a9"
+    }
+  },
+  "splits": {
+    "train": {
+      "count": 1200,
+      "seed": 123,
+      "sampling": {
+        "attempted": 1594,
+        "rejected": 394
+      }
+    },
+    "val": {
+      "count": 240,
+      "seed": 124,
+      "sampling": {
+        "attempted": 344,
+        "rejected": 104
+      }
+    },
+    "test": {
+      "count": 240,
+      "seed": 125,
+      "sampling": {
+        "attempted": 312,
+        "rejected": 72
+      }
+    }
+  },
+  "summary": {
+    "test": {
+      "count": 240,
+      "feasible_rate": 1.0,
+      "success_rate": 0.0,
+      "mean_nrmse": 0.20489536225795746,
+      "median_nrmse": 0.18104849755764008,
+      "mean_rmse": 0.1784542053937912,
+      "max_point_error": 0.6559997797012329,
+      "distinct_scores": 4,
+      "symbols_used": [
+        3,
+        4,
+        6,
+        7
+      ],
+      "mean_length": 1.0,
+      "length_histogram": {
+        "1": 240
+      }
+    },
+    "shuffled_message": {
+      "count": 240,
+      "feasible_rate": 1.0,
+      "success_rate": 0.0,
+      "mean_nrmse": 0.3243902623653412,
+      "median_nrmse": 0.2958192229270935,
+      "mean_rmse": 0.2727128863334656,
+      "max_point_error": 0.83670574426651,
+      "distinct_scores": 4,
+      "symbols_used": [
+        3,
+        4,
+        6,
+        7
+      ],
+      "mean_length": 1.0,
+      "length_histogram": {
+        "1": 240
+      }
+    },
+    "stationary": {
+      "count": 240,
+      "feasible_rate": 1.0,
+      "success_rate": 0.0,
+      "mean_nrmse": 0.2867749333381653,
+      "median_nrmse": 0.2324298918247223,
+      "mean_rmse": 0.24365203082561493,
+      "max_point_error": 0.6985000371932983,
+      "distinct_scores": 4,
+      "symbols_used": [
+        3,
+        4,
+        6,
+        7
+      ],
+      "mean_length": 1.0,
+      "length_histogram": {
+        "1": 240
+      }
+    }
+  },
+  "provenance": {
+    "revision": "e9484269c0084d0e4ba0c6d600ed193a0097f571",
+    "dirty": false,
+    "torch": "2.7.1",
+    "python": "3.10.14",
+    "lock_sha256": "f62eeef11f8f0cc26d03f5f151cebe66bbac093ada6ee8dce9dbdfef9b010a80"
+  },
+  "limits": "Independent seeded IID draws, not held-out structural compositions. No proof of grammar. CPU, unit links, fixed sampling progress. Straight-through argmax training; hard integer messages at evaluation."
+}

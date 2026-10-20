@@ -16,11 +16,11 @@ A motion language should be **abstract** across joint realizations, **executable
 
 Compression minimizes representation size and reconstruction error. A short discrete trajectory code can achieve both without discovering reusable motion semantics. Cross-configuration execution alone is also insufficient: transmitting an end-effector curve and using inverse kinematics can pass that test.
 
-Phase 1 establishes discrete communication (initially four tokens from a 16-symbol vocabulary, at most 16 nominal bits). Phase 2 tests language through held-out composition, token intervention, local edits, and context-compatible subprogram substitution against matched compression baselines. Distinguish **reading** an unseen demonstrated combination from **writing** it by recombining symbols without its demonstration.
+Phase 1 establishes discrete communication. The original proposal suggested 4×16; the implemented fixed experiment uses 32 tokens from 8 symbols (96 nominal bits), followed by a separate EOS extension. Phase 2 tests language through held-out composition, token intervention, local edits, and context-compatible subprogram substitution against matched compression baselines. Distinguish **reading** an unseen demonstrated combination from **writing** it by recombining symbols without its demonstration.
 
 ## Current implementation scope
 
-The first milestone is an analytic NumPy benchmark: forward/inverse kinematics, continuous feasible trajectories, and A/B reproduction through conventional IK. This is an oracle/control baseline with access to the full relative target curve, **not a learned score or evidence of a language**. A learned fixed-message Notator/Performer is now implemented below. Matched bit-budget compression baselines remain future work.
+The first milestone is an analytic NumPy benchmark: forward/inverse kinematics, continuous feasible trajectories, and A/B reproduction through conventional IK. This is an oracle/control baseline with access to the full relative target curve, **not a learned score or evidence of a language**. Learned fixed-message and EOS-capable Notator/Performer models are now implemented below. Matched bit-budget compression baselines remain future work.
 
 ## Independent environment
 
@@ -104,3 +104,8 @@ This first variable-length extension predicts candidate slots in parallel and tr
 The optional warm start copies the fixed model and adds an EOS output row. Variable training is additional optimization with a fresh optimizer, not an equal-compute comparison with fixed training. Training and validation selection include the length term. Termination length itself carries information; a shorter average payload is not a complete entropy/bit-budget comparison. `--variable` also supports training from scratch.
 
 Reload evaluation for either mode with `.venv-roboscore/bin/python -m roboscore.evaluate outputs/fixed32`. This reloads `best.pt`, reads only the saved test demonstrations/receiver initial states, and recomputes integer-message rollouts; saved predictions are not reused as results.
+
+
+### Observed learning status
+
+Both learning modes have completed training and checkpoint-reload evaluation. Fixed32 test mean NRMSE is 0.2075; EOS fine-tuning reaches 0.2049. **Both have 0% strict drawing success** at the 0.01 threshold. Although the EOS architecture supports 1–32 motion symbols, the selected trained checkpoint uses just one symbol for every test example (length collapse), with only four distinct test messages. This is not a useful variable-length motion notation yet. See [full results](docs/learning-results.md); the slight metric difference is not evidence that EOS helps, since the EOS run received 40 additional epochs of optimization.
