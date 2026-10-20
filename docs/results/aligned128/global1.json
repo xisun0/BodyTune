@@ -1,0 +1,97 @@
+{
+  "config": {
+    "mode": "global",
+    "hidden": 128,
+    "encoder_hidden": 64,
+    "symbols": 8,
+    "steps": 96,
+    "dt": 0.05,
+    "motion_scale": 0.05
+  },
+  "nominal_bits": 3,
+  "training": {
+    "epochs": 300,
+    "completed_epochs": 134,
+    "best_epoch": 94,
+    "stopping_reason": "validation_patience",
+    "min_epochs": 80,
+    "patience": 40,
+    "seed": 123,
+    "batch_size": 64,
+    "threads": 4,
+    "optimizer": "Adam",
+    "learning_rate": 0.001,
+    "gradient_clip": 1.0,
+    "seconds": 134.35962520795874,
+    "parameters": 124746,
+    "performer_parameters": 119874,
+    "initial_weights_sha256": "263ecf05e00931e0312f6fb43de3c53d51f3bff2ab655274cd8e50f3360d47c0"
+  },
+  "data": {
+    "source": "outputs/circles1",
+    "sha256": {
+      "train": "9edde9e0180277492b66b81eb7191bb6ab2fe2b7c5c3dc601cfe6a6974122ed9",
+      "val": "3fe7cfdedb7f0ba68a69f452268e386230d65208980597664d92d07890e4db2a",
+      "test": "3051bd68dded0db8aea3d740171be537284688a9840210589216d757828397c1"
+    },
+    "counts": {
+      "train": 1200,
+      "val": 240,
+      "test": 240
+    }
+  },
+  "summary": {
+    "test": {
+      "count": 240,
+      "feasible_rate": 1.0,
+      "success_rate": 0.03333333333333333,
+      "mean_nrmse": 0.03334140032529831,
+      "median_nrmse": 0.031506460160017014,
+      "mean_rmse": 0.04801123961806297,
+      "max_point_error": 0.18398380279541016,
+      "distinct_scores": 2,
+      "symbols_used": [
+        0,
+        5
+      ],
+      "tokens": 1
+    },
+    "shuffle_demonstrations": {
+      "count": 240,
+      "feasible_rate": 1.0,
+      "success_rate": 0.025,
+      "mean_nrmse": 0.0723491683602333,
+      "median_nrmse": 0.05745130777359009,
+      "mean_rmse": 0.09982841461896896,
+      "max_point_error": 0.3853495717048645,
+      "distinct_scores": 2,
+      "symbols_used": [
+        0,
+        5
+      ],
+      "tokens": 1
+    },
+    "permute_steps": {
+      "count": 240,
+      "feasible_rate": 1.0,
+      "success_rate": 0.03333333333333333,
+      "mean_nrmse": 0.03334140032529831,
+      "median_nrmse": 0.031506460160017014,
+      "mean_rmse": 0.04801123961806297,
+      "max_point_error": 0.18398380279541016,
+      "distinct_scores": 2,
+      "symbols_used": [
+        0,
+        5
+      ],
+      "tokens": 1
+    }
+  },
+  "provenance": {
+    "revision": "528b926f62dc8b9427be5e84194dd2f81fd8aee6",
+    "dirty_at_start": false,
+    "torch": "2.7.1",
+    "lock_sha256": "f62eeef11f8f0cc26d03f5f151cebe66bbac093ada6ee8dce9dbdfef9b010a80"
+  },
+  "limits": "Same parameter shapes/init and optimizer, but global 3 bits vs local 285 bits. Shared phase clock and circle-only data. Locality is not isolated from capacity. No grammar/compositionality claim; deterministic straight-through argmax training."
+}
