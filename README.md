@@ -58,3 +58,13 @@ The figure script writes `figures/baseline.png`, vector `baseline.pdf`, and `arm
 ## Verified baseline result
 
 The first clean-revision run evaluated 1,200 pairs (seed 42): the full-curve IK oracle reproduced all drawings to numerical precision; joint-increment copying met the drawing criterion in none of the pairs, with 16 constraint-invalid rollouts. See [results and limitations](docs/baseline-results.md) and the [machine-readable report](docs/results/baseline-seed42.json). This establishes the analytic reproduction pipeline, not a learned motion language.
+
+## Full arm posture animation
+
+```bash
+.venv-roboscore/bin/python figures/animate.py
+```
+
+This renders a feasible circle example as three synchronized panels: A, B with the full-curve IK oracle, and B copying A's joint increments. Orange links show the complete base–elbow–tip posture; blue traces show the executed pen path; gray curves show each robot's intended drawing. All panels use the same world-coordinate scale. Joint angles and simulation time are displayed. Outputs are `figures/arm_motion.gif`, a self-contained `arm_motion.html` with playback/scrubbing controls, and `posture_midpoint.png`. Set `ROBOSCORE_RUN` to choose another run.
+
+Frames use recorded joint states at the run's sampling interval, with no dynamics or interpolated physics simulation. The oracle receives the full curve, not learned symbols.

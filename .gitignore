@@ -9,3 +9,5 @@ outputs/
 figures/*.png
 figures/*.pdf
 .DS_Store
+figures/*.gif
+figures/arm_motion.html

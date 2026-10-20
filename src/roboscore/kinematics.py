@@ -39,6 +39,12 @@ class Arm:
         l1, l2 = self.lengths
         return np.stack([l1 * np.cos(a) + l2 * np.cos(b), l1 * np.sin(a) + l2 * np.sin(b)], axis=-1)
 
+    def joints(self, q):
+        """Return base, elbow and tip coordinates for each joint configuration."""
+        q = self._points(q)
+        elbow = self.lengths[0] * np.stack([np.cos(q[..., 0]), np.sin(q[..., 0])], axis=-1)
+        return np.stack([np.zeros_like(elbow), elbow, self.fk(q)], axis=-2)
+
     def ik(self, points, branch=1):
         """Solve an entire ordered path on one elbow branch; never switch branches."""
         if branch not in (-1, 1):

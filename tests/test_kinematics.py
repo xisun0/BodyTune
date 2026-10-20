@@ -52,3 +52,15 @@ def test_feasible_pairs_are_deterministic_and_equivalent():
 def test_generation_budget_is_explicit():
     with pytest.raises(RuntimeError, match="within 0 attempts"):
         generate(2, max_attempts=0)
+
+
+def test_full_posture_preserves_link_lengths():
+    arm = Arm(lengths=(0.7, 1.3))
+    q = np.array([[0.2, 1.1], [-0.4, -1.5]])
+    joints = arm.joints(q)
+    assert joints.shape == (2, 3, 2)
+    np.testing.assert_allclose(joints[:, 0], 0)
+    np.testing.assert_allclose(joints[:, -1], arm.fk(q))
+    np.testing.assert_allclose(
+        np.linalg.norm(np.diff(joints, axis=1), axis=-1), [[0.7, 1.3], [0.7, 1.3]]
+    )
