@@ -1,0 +1,77 @@
+{
+  "config": {
+    "steps": 96,
+    "tokens": 1,
+    "symbols": 8,
+    "hidden": 128,
+    "dt": 0.05,
+    "variable": false
+  },
+  "input": "exact scalar diameter in link units; no Notator",
+  "training": {
+    "seed": 123,
+    "epoch_budget": 300,
+    "completed_epochs": 300,
+    "best_epoch": 296,
+    "patience": 40,
+    "min_epochs": 80,
+    "stopping_reason": "epoch_budget",
+    "batch_size": 64,
+    "threads": 4,
+    "optimizer": "Adam",
+    "learning_rate": 0.001,
+    "gradient_clip": 1.0,
+    "seconds": 293.20496170804836,
+    "parameters": 118914
+  },
+  "data": {
+    "source": "outputs/circles1",
+    "sha256": {
+      "train": "9edde9e0180277492b66b81eb7191bb6ab2fe2b7c5c3dc601cfe6a6974122ed9",
+      "val": "3fe7cfdedb7f0ba68a69f452268e386230d65208980597664d92d07890e4db2a",
+      "test": "3051bd68dded0db8aea3d740171be537284688a9840210589216d757828397c1"
+    },
+    "counts": {
+      "train": 1200,
+      "val": 240,
+      "test": 240
+    }
+  },
+  "summary": {
+    "test": {
+      "count": 240,
+      "feasible_rate": 1.0,
+      "success_rate": 0.9291666666666667,
+      "mean_nrmse": 0.005543955136090517,
+      "median_nrmse": 0.004702482372522354,
+      "mean_rmse": 0.008404012769460678,
+      "max_point_error": 0.08276765793561935
+    },
+    "shuffled_diameter": {
+      "count": 240,
+      "feasible_rate": 0.9958333333333333,
+      "success_rate": 0.0625,
+      "mean_nrmse": 0.08091329783201218,
+      "median_nrmse": 0.06640473753213882,
+      "mean_rmse": 0.10893238335847855,
+      "max_point_error": 0.43863916397094727
+    },
+    "mean_diameter": {
+      "count": 240,
+      "feasible_rate": 1.0,
+      "success_rate": 0.058333333333333334,
+      "mean_nrmse": 0.06421249359846115,
+      "median_nrmse": 0.05071531981229782,
+      "mean_rmse": 0.08303691446781158,
+      "max_point_error": 0.23461124300956726
+    }
+  },
+  "provenance": {
+    "revision": "51a44c923910c805028f73d7454224232f065bb1",
+    "dirty_at_start": false,
+    "torch": "2.7.1",
+    "python": "3.10.14",
+    "lock_sha256": "f62eeef11f8f0cc26d03f5f151cebe66bbac093ada6ee8dce9dbdfef9b010a80"
+  },
+  "limits": "One seed, fixed learning rate, same epoch/stopping protocol, not equal FLOPs. Hidden width also scales conditioning and action layers. Accurate scalar diameter is a diagnostic oracle, not a discovered motion language."
+}
