@@ -19,8 +19,19 @@ from .kinematics import Arm
 from .models import ModelConfig, MotionModel, features, fk
 
 
-def dataset(count, seed, config):
-    pairs, sampling = generate(count, config.steps, seed, config.dt)
+def dataset(count, seed, config, task="mixed", save_path=None):
+    pairs, sampling = generate(count, config.steps, seed, config.dt, task=task)
+    if save_path is not None:
+        payload = {
+            "q_a": np.stack([p.q_a for p in pairs]),
+            "q_target": np.stack([p.q_b for p in pairs]),
+            "relative": np.stack([p.relative for p in pairs]),
+            "family": np.array([p.family for p in pairs]),
+            "dt": np.array(config.dt),
+        }
+        if task == "circles":
+            payload["diameter"] = np.array([p.diameter for p in pairs])
+        np.savez_compressed(save_path, **payload)
     a = torch.tensor(np.stack([p.q_a for p in pairs]), dtype=torch.float32)
     b = torch.tensor(np.stack([p.q_b for p in pairs]), dtype=torch.float32)
     return a, b, [p.family for p in pairs], sampling
@@ -114,7 +125,12 @@ def train(
     tokens=32,
     length_weight=0.01,
     init_checkpoint=None,
+    task="mixed",
+    patience=0,
+    min_epochs=0,
 ):
+    if patience < 0 or min_epochs < 0 or min_epochs > epochs:
+        raise ValueError("invalid stopping configuration")
     if min(epochs, train_count, val_count, test_count, batch_size, threads) < 1:
         raise ValueError("counts, epochs, batch size and threads must be positive")
     output = Path(output)
@@ -127,7 +143,7 @@ def train(
         raise ValueError("negative length penalty")
     config = ModelConfig(variable=variable, tokens=tokens)
     splits = {
-        name: dataset(count, seed + offset, config)
+        name: dataset(count, seed + offset, config, task, output / f"{name}_demonstrations.npz")
         for name, count, offset in [
             ("train", train_count, 0),
             ("val", val_count, 1),
@@ -166,6 +182,7 @@ def train(
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     best, history, best_epoch = float("inf"), [], 0
     started = time.monotonic()
+    stopping_reason = "epoch_budget"
     for epoch in range(1, epochs + 1):
         model.train()
         total = 0
@@ -214,6 +231,10 @@ def train(
             torch.save(state, output / "best.pt")
         if epoch == 1 or epoch % 5 == 0 or epoch == epochs:
             print(json.dumps(history[-1]), flush=True)
+        if patience and epoch >= min_epochs and epoch - best_epoch >= patience:
+            stopping_reason = "validation_patience"
+            print(f"Early stop at epoch {epoch}; best validation epoch {best_epoch}", flush=True)
+            break
     checkpoint = torch.load(output / "best.pt", weights_only=True)
     model.load_state_dict(checkpoint["model"])
     ta, tb, families, _ = splits["test"]
@@ -245,6 +266,11 @@ def train(
         "config": asdict(config),
         "training": {
             "epochs": epochs,
+            "completed_epochs": epoch,
+            "stopping_reason": stopping_reason,
+            "patience": patience,
+            "min_epochs": min_epochs,
+            "task": task,
             "seed": seed,
             "batch_size": batch_size,
             "best_epoch": best_epoch,
@@ -266,7 +292,7 @@ def train(
             "python": platform.python_version(),
             "lock_sha256": hashlib.sha256(Path("uv.lock").read_bytes()).hexdigest(),
         },
-        "limits": "Independent seeded IID draws, not held-out structural compositions. "
+        "limits": "Independent seeded IID draws within the chosen task, not held-out structural compositions. "
         "No proof of grammar. CPU, unit links, fixed sampling progress. "
         "Straight-through argmax training; hard integer messages at evaluation.",
     }
@@ -293,6 +319,11 @@ def main():
     )
     parser.add_argument("--length-weight", type=float, default=0.01)
     parser.add_argument("--init-checkpoint", type=Path)
+    parser.add_argument("--task", choices=["mixed", "circles"], default="mixed")
+    parser.add_argument(
+        "--patience", type=int, default=0, help="Validation early-stop patience; 0 disables"
+    )
+    parser.add_argument("--min-epochs", type=int, default=0)
     train(**vars(parser.parse_args()))
 
 

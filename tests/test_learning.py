@@ -130,3 +130,25 @@ def test_96_token_training_and_checkpoint_state(tmp_path):
     assert checkpoint["loader_rng"].numel() > 0
     assert checkpoint["temperature_horizon"] == 1
     assert run(tmp_path / "fixed96")["mean_length"] == 96
+
+
+def test_single_token_circle_pipeline_saves_demonstrations(tmp_path):
+    result = train(
+        tmp_path / "circles",
+        epochs=1,
+        min_epochs=1,
+        patience=2,
+        train_count=12,
+        val_count=6,
+        test_count=6,
+        batch_size=6,
+        threads=2,
+        task="circles",
+        tokens=1,
+    )
+    with np.load(tmp_path / "circles/train_demonstrations.npz", allow_pickle=False) as data:
+        assert data["q_a"].shape == (12, 96, 2)
+        assert set(data["family"]) == {"circle"}
+        assert len(np.unique(data["diameter"])) == 12
+    assert result["summary"]["test"]["mean_length"] == 1
+    assert result["training"]["completed_epochs"] == 1

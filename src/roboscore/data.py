@@ -48,18 +48,29 @@ class Pair:
     q_a: np.ndarray
     q_b: np.ndarray
     dt: float
+    diameter: float | None = None
 
 
-def generate(count=120, steps=96, seed=42, dt=0.05, arm=None, max_attempts=None):
+def generate(count=120, steps=96, seed=42, dt=0.05, arm=None, max_attempts=None, task="mixed"):
     if count < 1 or steps < 3 or not np.isfinite(dt) or dt <= 0:
         raise ValueError("invalid dataset parameters")
+    if task not in ("mixed", "circles"):
+        raise ValueError("unknown task")
     arm = arm or Arm()
     rng = np.random.default_rng(seed)
+    # Hold each requested diameter fixed while resampling feasible initial states.
+    diameters = rng.uniform(0.24, 0.70, count) if task == "circles" else None
     pairs, rejected = [], 0
     budget = max_attempts if max_attempts is not None else count * 100
     for _ in range(budget):
-        family = FAMILIES[len(pairs) % len(FAMILIES)]
-        relative = curve(family, steps, rng)
+        diameter = None if diameters is None else float(diameters[len(pairs)])
+        if task == "circles":
+            family = "circle"
+            theta = np.linspace(0, 2 * np.pi, steps)
+            relative = diameter / 2 * np.column_stack((np.cos(theta) - 1, np.sin(theta)))
+        else:
+            family = FAMILIES[len(pairs) % len(FAMILIES)]
+            relative = curve(family, steps, rng)
         paths = []
         try:
             for _role in range(2):
@@ -74,7 +85,7 @@ def generate(count=120, steps=96, seed=42, dt=0.05, arm=None, max_attempts=None)
         except ValueError:
             rejected += 1
             continue
-        pairs.append(Pair(family, relative, *paths, dt))
+        pairs.append(Pair(family, relative, *paths, dt, diameter))
         if len(pairs) == count:
             return pairs, {"attempted": len(pairs) + rejected, "rejected": rejected}
     raise RuntimeError(f"only {len(pairs)}/{count} feasible pairs within {budget} attempts")

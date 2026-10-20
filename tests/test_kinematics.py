@@ -64,3 +64,16 @@ def test_full_posture_preserves_link_lengths():
     np.testing.assert_allclose(
         np.linalg.norm(np.diff(joints, axis=1), axis=-1), [[0.7, 1.3], [0.7, 1.3]]
     )
+
+
+def test_circle_only_data_has_fixed_phase_and_varying_diameter():
+    pairs, _ = generate(24, task="circles", seed=99)
+    theta = np.linspace(0, 2 * np.pi, 96)
+    diameters = []
+    for pair in pairs:
+        assert pair.family == "circle"
+        assert 0.24 <= pair.diameter <= 0.70
+        expected = pair.diameter / 2 * np.column_stack((np.cos(theta) - 1, np.sin(theta)))
+        np.testing.assert_allclose(pair.relative, expected, atol=1e-14)
+        diameters.append(pair.diameter)
+    assert len(set(diameters)) == 24

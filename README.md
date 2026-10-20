@@ -127,3 +127,18 @@ This experiment retains 8 symbols and the same 96-sample trajectories, seed, spl
 New runs save `last.pt` as well as `best.pt`, including optimizer state, Torch and data-loader RNG states, epoch/history, validation-selection state and the temperature schedule horizon. `--init-checkpoint` remains a weights-only warm start with a new optimizer; it is not an exact-resume command. The stored state supports implementing a proper continuation without losing optimizer history later.
 
 The first 96-token run completed 60 epochs: test mean NRMSE **0.2120**, strict success **0%**, versus **0.2075 / 0%** for fixed32. It used all eight symbols but produced only 71 distinct test messages (fixed32: 80). The best validation checkpoint was again the final epoch, so this is a budget-matched single-seed comparison, not a convergence result. [Full comparison](docs/learning-results.md).
+
+## Simplified diameter-only circles: one 8-way token
+
+```bash
+.venv-roboscore/bin/roboscore-train --output outputs/circles1 --task circles --tokens 1 \
+  --train-count 1200 --val-count 240 --test-count 240 \
+  --epochs 300 --min-epochs 80 --patience 40
+.venv-roboscore/bin/python -m roboscore.evaluate outputs/circles1
+```
+
+All curves are analytic circles sampled at 96 points, beginning at the rightmost point, traversed counterclockwise in a fixed shared orientation. Only diameter varies, uniformly drawn in [0.24, 0.70] link units before feasibility sampling. Each requested diameter is held fixed while A/B initial configurations are resampled until both whole paths are feasible. A/B configurations still differ; no real hardware is involved. The relative circle is `(d/2)*(cos(theta)-1, sin(theta))`. This isolates scale from orientation and drawing-direction variations.
+
+There are **1,200 training demonstrations**, plus 240 independent validation and 240 test demonstrations (seeds 123/124/125). `train_demonstrations.npz`, `val_demonstrations.npz`, and `test_demonstrations.npz` save full A/B joint paths, relative pen paths, family, time step and exact diameter. Shape/diameter metadata are not passed to the model. A single token has eight choices (3 nominal bits), so continuous diameters must share approximate representations; eight diameter classes are not supplied as labels.
+
+The Notator/Performer architecture and geometry objective are retained with `tokens=1`. At least 80 epochs run; thereafter 40 epochs without a strictly improved validation selection score trigger early stopping, with a maximum budget of 300. Both the completed and selected epoch are reported. The test set is used only after validation selection. This tests scale communication, not motion composition or a grammar.
