@@ -67,3 +67,35 @@ Next research work should first establish high-fidelity drawing communication
 and diagnose message/length collapse before making compositional claims. A
 continuous-channel control and fixed-length ablations would help separate
 controller difficulty from discrete-channel optimization.
+
+## Fixed 96 tokens, 8 symbols
+
+Source: clean commit `3d2f619`. Run: `outputs/fixed96`, seed 123, 60 epochs,
+trained from scratch with the same 1,200/240/240 seeded splits and other
+hyperparameters as fixed32. Test demonstrations, receiver initial states and
+family ordering were checked for exact equality between saved runs.
+
+| Fixed score | Nominal capacity | Test mean NRMSE | Strict success | Distinct test messages |
+| --- | ---: | ---: | ---: | ---: |
+| 32 tokens × 8 symbols | 96 bits | 0.2075 | 0% | 80 |
+| 96 tokens × 8 symbols | 288 bits | 0.2120 | 0% | 71 |
+
+All 96-token test rollouts were feasible; all eight symbols were used. Shuffling
+messages raised mean NRMSE to 0.3135, versus 0.2868 for staying stationary. Thus
+there is still message-dependent behavior, but increasing token capacity did not
+improve drawing accuracy in this single run. The extra tokens do not imply
+one-to-one temporal alignment with the 96 trajectory samples. Query and message
+projection parameter counts also grow, so this comparison does not isolate
+capacity from model parameterization or initialization effects.
+
+The validation-selected checkpoint was epoch 60, the final budgeted epoch.
+The run does not establish convergence; a longer-horizon comparison remains
+open. New `best.pt` and `last.pt` files retain optimizer, Torch RNG, data-loader
+RNG, selection history and temperature horizon, unlike the earlier fixed32
+checkpoint. Current `--init-checkpoint` still performs only a weights warm start.
+
+The checkpoint was reloaded and test metrics reproduced. See the
+[machine-readable report](results/fixed96-seed123.json). Reproduce with the
+README's `--tokens 96` command. First-per-family plots are in
+`outputs/fixed96/drawings.png`; the validation curve is in
+`outputs/fixed96/learning_curve.png`.
