@@ -1,0 +1,134 @@
+{
+  "config": {
+    "hidden": 128,
+    "symbols": 8,
+    "steps": 96,
+    "dt": 0.05,
+    "channels": 64,
+    "latent": 8,
+    "motion_scale": 0.05,
+    "commitment": 0.25,
+    "auxiliary_weight": 0.01,
+    "mode": "global",
+    "auxiliary_clock": true
+  },
+  "training": {
+    "initial_weights_before_kmeans_sha256": "051b7240d278c99c6b52f94e9124e19bbb8670e1344260df7bbfefc92b4411cc",
+    "seed": 123,
+    "batch_size": 64,
+    "epochs": 300,
+    "completed_epochs": 221,
+    "best_epoch": 181,
+    "pretrain_epochs": 40,
+    "min_epochs": 80,
+    "patience": 40,
+    "stopping_reason": "validation_patience",
+    "optimizer": "Adam",
+    "learning_rate": 0.001,
+    "gradient_clip": 1.0,
+    "threads": 4,
+    "seconds": 467.34315012488514,
+    "parameters": 158476,
+    "performer_parameters": 119874
+  },
+  "data": {
+    "source": "outputs/circles1",
+    "sha256": {
+      "train": "9edde9e0180277492b66b81eb7191bb6ab2fe2b7c5c3dc601cfe6a6974122ed9",
+      "val": "3fe7cfdedb7f0ba68a69f452268e386230d65208980597664d92d07890e4db2a",
+      "test": "3051bd68dded0db8aea3d740171be537284688a9840210589216d757828397c1"
+    },
+    "counts": {
+      "train": 1200,
+      "val": 240,
+      "test": 240
+    }
+  },
+  "summary": {
+    "test": {
+      "count": 240,
+      "feasible_rate": 1.0,
+      "success_rate": 0.26666666666666666,
+      "mean_nrmse": 0.015068785287439823,
+      "median_nrmse": 0.01377769373357296,
+      "mean_rmse": 0.021441109478473663,
+      "max_point_error": 0.10795354843139648,
+      "distinct_scores": 6,
+      "symbols_used": [
+        0,
+        1,
+        2,
+        3,
+        6,
+        7
+      ],
+      "tokens": 1
+    },
+    "shuffle_demonstrations": {
+      "count": 240,
+      "feasible_rate": 1.0,
+      "success_rate": 0.05,
+      "mean_nrmse": 0.0813116654753685,
+      "median_nrmse": 0.06559636443853378,
+      "mean_rmse": 0.11016961932182312,
+      "max_point_error": 0.4305519163608551,
+      "distinct_scores": 6,
+      "symbols_used": [
+        0,
+        1,
+        2,
+        3,
+        6,
+        7
+      ],
+      "tokens": 1
+    },
+    "permute_steps": {
+      "count": 240,
+      "feasible_rate": 1.0,
+      "success_rate": 0.26666666666666666,
+      "mean_nrmse": 0.015068785287439823,
+      "median_nrmse": 0.01377769373357296,
+      "mean_rmse": 0.021441109478473663,
+      "max_point_error": 0.10795354843139648,
+      "distinct_scores": 6,
+      "symbols_used": [
+        0,
+        1,
+        2,
+        3,
+        6,
+        7
+      ],
+      "tokens": 1
+    }
+  },
+  "code_usage": {
+    "counts": [
+      37,
+      30,
+      40,
+      40,
+      0,
+      0,
+      52,
+      41
+    ],
+    "perplexity": 5.922004699707031
+  },
+  "circle_diagnostics": {
+    "circle_fit_valid": 240,
+    "count": 240,
+    "mean_radial_error_over_radius": 0.02553174536468131,
+    "mean_relative_diameter_error": 0.04523775236269179,
+    "mean_turns": 0.9965445296422616,
+    "mean_closure_over_target_diameter": 0.04835682072451594
+  },
+  "provenance": {
+    "revision": "e36b9f6406ecd134f657f63f2b9fbd6b917d7e07",
+    "dirty_at_start": false,
+    "torch": "2.7.1",
+    "lock_sha256": "f62eeef11f8f0cc26d03f5f151cebe66bbac093ada6ee8dce9dbdfef9b010a80"
+  },
+  "limits": "One seed; circle-only, fixed phase/progress. 1 tokens/3 nominal bits. TCN receptive field 15 actions; additional 40-epoch reconstruction pretraining. No diameter/quantizer labels, no continuous latent side channel, no Transformer. Not a parameter/compute-matched comparison or proof of composition/editing."
+}

@@ -36,3 +36,28 @@ Evaluation also reports symbol counts/perplexity, cross-demonstration message sh
 ## Interpretation boundaries
 
 One token carries3nominal bits versus285for95tokens. This compares pooling and information budget together, not locality in isolation. One seed cannot establish a statistically reliable ranking. Both models share a circle phase/progress clock, and fixed-base arms have the same morphology. The experiment is not a theoretical capacity ceiling, a learned grammar, or a test of composition/editing/generalization to other shapes.
+
+## Completed results
+
+| Metric | Global1 | Local95 |
+|---|---:|---:|
+| Strict success |64/240 = **26.67%** |136/240 = **56.67%** |
+| Mean NRMSE |0.0150688 |**0.0107438** |
+| Mean absolute relative diameter error |4.5238% |**2.3636%** |
+| Circle radial RMSE / radius |2.5532% |**2.3564%** |
+| Feasible normal executions |240/240 |240/240 |
+| Codes used |6/8 |8/8 |
+| Code perplexity |5.9220 |6.6207 |
+| Distinct scores |6 |106 |
+| Completed joint epochs |221 |204 |
+| Validation-selected epoch |181 |164 |
+
+Both models have158,476parameters, including119,874in the Performer. Initial weights before k-means have the same SHA256`051b7240d278c99c6b52f94e9124e19bbb8670e1344260df7bbfefc92b4411cc`; data files and ordered test trajectories match exactly. Both runs stopped using validation patience40. Normal test circle fits were valid for all240examples. Best-checkpoint reload reproduces the hard-integer summaries.
+
+Local95 improves success by30percentage points, reduces mean NRMSE by about28.7%, and approximately halves diameter error. Circularity improves only modestly, by about7.7%relative. Thus the extra tokens chiefly improve scale and ordered execution accuracy in this experiment, rather than transforming a noncircular path into a circle. These are descriptive error patterns, not a formal causal error decomposition.
+
+Shuffling messages across demonstrations gives success5.00%andNRMSE0.0813117forglobal1, versus4.58%and0.0801418forlocal95. The global step-permutation identity reproduces its normal metrics exactly. Permuting local token order gives0%success andNRMSE0.0437192; all those permuted rollouts remain feasible. One shuffled local rollout is infeasible. The sequence content and order affect execution, although this alone does not establish independently editable or compositional symbols.
+
+The legacy local95 experiment scored50.42%with a time-free auxiliary decoder, whereas the new matched local95 scores56.67%. Their difference cannot be attributed confidently to a single mechanism: the auxiliary architecture changes both the objective's usable conditioning and random initialization. The primary comparison is the new global1 versus new local95 pair. The per-run reports retain a generic historical parameter/compute disclaimer; this pair is parameter matched as verified above, while actual compute and message budgets differ.
+
+The result establishes that a learned single-token TCN/VQ system can execute circles better than the previous collapsed two-code global model, but does not attain the manually assigned eight-bin oracle's48.75%. Global1 uses only six codes, and optimization and quantization quality still limit the comparison. Neither26.67%nor56.67%is a theoretical ceiling. Multiple seeds, unseen shapes and composition/editing tests remain untested.
