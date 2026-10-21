@@ -208,3 +208,18 @@ The GRU128 Performer, including its seeded initial weights, matches the learned 
 `figures/binned.py` compares executions with the learned global baseline and computes an ideal bin-midpoint-circle reference. That reference excludes controller errors and kinematic feasibility checks; it is not an upper bound over bin choices, representative diameters or receiver-state-dependent policies.
 
 Completed fixed-bin result: **NRMSE 0.01158, strict success 117/240 = 48.75%, feasible100%, all8 IDs used**; shuffled bins reduce success to7.5%. Training stopped at242 with best epoch202; checkpoint reload reproduces results. The ideal bin-midpoint-circle reference gives72.5% geometric success without controller/feasibility checks; neither number is a theoretical upper bound. This substantially improves on learned global1 (3.33%) while trailing the exact-continuous-diameter diagnostic (92.92%). [Protocol, collapse interpretation and results](docs/diameter-bins.md).
+
+## TCN + VQ Translator, GRU128 Performer
+
+```bash
+.venv-roboscore/bin/python -m roboscore.vq --source outputs/circles1 \
+  --output outputs/tcn_vq
+.venv-roboscore/bin/python -m roboscore.vq --source outputs/circles1 \
+  --output outputs/tcn_vq --evaluate
+```
+
+The Translator observes the same 95 A end-effector displacements, normalized by 0.05. A 2→64 pointwise input projection, three causal residual Conv1D layers (kernel3, dilations1/2/4; receptive field15 actions), and a 64→8 projection produce one 8D latent per action. Nearest-neighbor VQ assigns each latent to one of **eight learned 8D codewords**, yielding a fixed 95-ID motion score. There are no diameter labels, prescribed directions, joint-increment inputs, absolute positions or explicit time inputs to the Translator. The GRU128 Performer retains its architecture and receives current code, receiver joint state, progress and recurrent state. Its eight embedding vectors are also the VQ codebook. Integer-ID decoding is tested against the quantized forward path; continuous encoder residuals are never transmitted. There is no Transformer in this experiment.
+
+Train-only deterministic k-means initializes the codebook from initial TCN features. Forty reconstruction pretraining epochs optimize the Translator, codebook and auxiliary 8→64→2 displacement decoder; GRU weights remain untouched. Joint training then uses the original rollout objective plus `0.01 * (normalized displacement reconstruction MSE + VQ loss)`. VQ loss is `MSE(code, stopgrad(latent)) + 0.25*MSE(latent, stopgrad(code))`, with a straight-through quantized latent for backward propagation. Reconstruction is a training auxiliary, not an inference input. No explicit balancing, dead-code restart or semantic supervision is used; code collapse remains possible and is measured.
+
+The immutable 1,200/240/240 circle splits and hashes are reused. Both stages use Adam0.001, batch64, clip1 and seed123; the joint optimizer and data-shuffle seed restart after pretraining. Joint training runs maximum300/minimum80 epochs with validation patience40 and the existing selection criterion. Reports include code counts/perplexity, circle-fit diagnostics, cross-demonstration score shuffling and within-score temporal permutation. Checkpoints retain optimizer/RNG state, and evaluation reload checks source hashes. This adds a TCN, VQ objectives and pretraining, so comparisons with previous models are not parameter/compute matched. The 95-token/285-bit, fixed-phase, circle-only setup does not establish compositionality or editing.
