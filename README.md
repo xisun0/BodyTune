@@ -227,3 +227,18 @@ The immutable 1,200/240/240 circle splits and hashes are reused. Both stages use
 After training, run `.venv-roboscore/bin/python figures/vq.py` to inspect inference, symbol sequences and code usage, compare with MLP local95, and export `train_scores.npz`, `val_scores.npz`, `test_scores.npz` from the selected frozen Translator. Each archive contains only the integer `scores` array; the source splits remain separate. [Architecture and evaluation protocol](docs/tcn-vq.md).
 
 Completed TCN/VQ result: **mean NRMSE0.01098, strict success121/240 =50.42%, feasible100%**. All8codes are used (perplexity7.51);93distinct test scores. Cross-demonstration shuffling reduces success to3.33%, temporal permutation to0% (one infeasible rollout). Joint training stopped at206 and selected epoch166 after40pretraining epochs. The earlier MLP local95 scored30.42%, but the new architecture, initialization, extra losses and pretraining differ, so this is not an isolated TCN/VQ ablation. [Full results and limitations](docs/tcn-vq.md).
+
+## Matched TCN/VQ: global1 versus local95
+
+```bash
+.venv-roboscore/bin/python -m roboscore.vq --source outputs/circles1 \
+  --output outputs/vq_tokens/global1 --mode global --auxiliary-clock
+.venv-roboscore/bin/python -m roboscore.vq --source outputs/circles1 \
+  --output outputs/vq_tokens/local95 --mode local --auxiliary-clock
+```
+
+The global arm averages the 95 TCN latent vectors before VQ, emits **one** of eight IDs, and repeats that one code as conditioning throughout the GRU128 rollout. The local arm keeps one code per action. Both use the same TCN, eight-entry VQ codebook, Performer and parameter initialization before train-only k-means; pooling is parameter-free. K-means then fits each arm's different training-latent distribution. All 1,200/240/240 saved source files, seed123, 40 pretraining epochs, Adam0.001, batch64, clip1, maximum300/minimum80 joint epochs and validation patience40 match.
+
+For a meaningful shared reconstruction objective, **both new arms** use the same auxiliary decoder `10→64→2`: quantized 8D code plus time progress and progress². A global code broadcasts to all95 positions; local codes align to their positions. This allows a global symbol to reconstruct a time-varying path rather than forcing one constant displacement. The time inputs go only to the auxiliary decoder (and the existing Performer clock), never to the Translator. Loss weights and reconstruction targets are unchanged. Both arms are rerun with this decoder; the old 50.42% result remains a legacy reference with its original time-free auxiliary decoder, not the matched local baseline. Old checkpoints retain identical inference behavior.
+
+Compare strict success, ordered NRMSE, mean absolute relative fitted-diameter error and circle-fit radial RMSE/radius. The latter measures circle shape independent of fitted size, center and phase; lower is better. Also report code usage and shuffled/permuted-score controls. Message budgets remain3 versus285 nominal bits, and this is a single-seed fixed-phase circle experiment, not a theoretical ceiling or proof of motion grammar.

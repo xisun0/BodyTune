@@ -49,3 +49,47 @@ def test_vq_training_reload_and_hash_refusal(tmp_path):
     np.savez_compressed(path, **values)
     with pytest.raises(ValueError, match="hashes"):
         reevaluate(tmp_path / "run", source)
+
+
+def test_matched_global_and_local_clock_models():
+    from roboscore.aligned import weight_hash
+
+    torch.set_num_threads(2)
+    torch.manual_seed(123)
+    local = VQModel(VQConfig(mode="local", auxiliary_clock=True))
+    torch.manual_seed(123)
+    global_model = VQModel(VQConfig(mode="global", auxiliary_clock=True))
+    assert weight_hash(local) == weight_hash(global_model)
+    assert sum(p.numel() for p in local.parameters()) == sum(
+        p.numel() for p in global_model.parameters()
+    )
+    motion = torch.randn(4, 95, 2) * 0.015
+    q0 = torch.tensor([[0.2, 1.1]]).expand(4, -1)
+    for model, tokens in ((local, 95), (global_model, 1)):
+        model.initialize_codebook(motion)
+        q, ids, reconstruction, vq = model(motion, q0)
+        assert ids.shape == (4, tokens)
+        torch.testing.assert_close(q, model.decode(ids, q0), atol=2e-6, rtol=1e-5)
+        (q.square().mean() + reconstruction + vq).backward()
+        assert model.translator.output.weight.grad.abs().sum() > 0
+    with pytest.raises(ValueError, match="time-conditioned"):
+        VQConfig(mode="global")
+
+
+def test_global_clock_training_and_identity_control(tmp_path):
+    source = tmp_path / "source"
+    source.mkdir()
+    for i, name in enumerate(("train", "val", "test")):
+        dataset(8, 60 + i, ModelConfig(tokens=1), "circles", source / f"{name}_demonstrations.npz")
+    report = train(
+        source,
+        tmp_path / "run",
+        epochs=1,
+        pretrain_epochs=1,
+        min_epochs=1,
+        threads=2,
+        mode="global",
+        auxiliary_clock=True,
+    )
+    assert report["summary"]["test"] == report["summary"]["permute_steps"]
+    assert reevaluate(tmp_path / "run", source) == report["summary"]["test"]

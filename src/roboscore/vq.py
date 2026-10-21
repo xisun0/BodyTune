@@ -15,7 +15,7 @@ from torch import nn
 from torch.nn import functional as F
 from torch.utils.data import DataLoader, TensorDataset
 
-from .aligned import AlignedConfig, StepPerformer, evaluate, load_splits
+from .aligned import AlignedConfig, StepPerformer, evaluate, load_splits, weight_hash
 from .diagnostics import circle_quality
 from .train import objective
 
@@ -31,8 +31,14 @@ class VQConfig:
     motion_scale: float = 0.05
     commitment: float = 0.25
     auxiliary_weight: float = 0.01
+    mode: str = "local"
+    auxiliary_clock: bool = False
 
     def __post_init__(self):
+        if self.mode not in ("global", "local"):
+            raise ValueError("expected global or local mode")
+        if self.mode == "global" and not self.auxiliary_clock:
+            raise ValueError("global mode requires the time-conditioned auxiliary decoder")
         if (self.hidden, self.symbols, self.steps, self.latent) != (128, 8, 96, 8):
             raise ValueError("expected GRU128, eight 8D codes and 96 states")
         if self.channels < 1 or self.dt != 0.05 or self.motion_scale <= 0:
@@ -40,7 +46,7 @@ class VQConfig:
 
     @property
     def tokens(self):
-        return self.steps - 1
+        return 1 if self.mode == "global" else self.steps - 1
 
 
 class CausalBlock(nn.Module):
@@ -62,10 +68,11 @@ class Translator(nn.Module):
         self.output = nn.Conv1d(config.channels, config.latent, 1)
 
     def forward(self, motion):
-        if motion.ndim != 3 or motion.shape[1:] != (self.config.tokens, 2):
+        if motion.ndim != 3 or motion.shape[1:] != (self.config.steps - 1, 2):
             raise ValueError("expected 95 endpoint displacements")
         x = F.relu(self.input((motion / self.config.motion_scale).transpose(1, 2)))
-        return self.output(self.blocks(x)).transpose(1, 2)
+        latent = self.output(self.blocks(x)).transpose(1, 2)
+        return latent.mean(1, keepdim=True) if self.config.mode == "global" else latent
 
 
 class VQModel(nn.Module):
@@ -75,7 +82,9 @@ class VQModel(nn.Module):
         self.translator = Translator(config)
         self.performer = StepPerformer(AlignedConfig(mode="local"))
         # The Performer's existing eight 8D embeddings ARE the shared VQ codebook.
-        self.reconstruct = nn.Sequential(nn.Linear(8, 64), nn.ReLU(), nn.Linear(64, 2))
+        self.reconstruct = nn.Sequential(
+            nn.Linear(10 if config.auxiliary_clock else 8, 64), nn.ReLU(), nn.Linear(64, 2)
+        )
 
     def quantize(self, latent):
         codebook = self.performer.embedding
@@ -97,11 +106,19 @@ class VQModel(nn.Module):
             raise ValueError("invalid code ID")
         return self.performer(F.one_hot(scores, 8).float(), q0)
 
+    def reconstruction_loss(self, z, motion):
+        if self.config.auxiliary_clock:
+            z = z.expand(-1, self.config.steps - 1, -1)
+            t = torch.arange(self.config.steps - 1, dtype=z.dtype, device=z.device)
+            t = (t / (self.config.steps - 1))[None, :, None].expand(len(z), -1, -1)
+            z = torch.cat((z, t, t.square()), -1)
+        return F.mse_loss(self.reconstruct(z), motion / self.config.motion_scale)
+
     def forward(self, motion, q0):
         z, ids, vq_loss = self.quantize(self.translator(motion))
-        reconstruction = self.reconstruct(z)
-        reconstruction_loss = F.mse_loss(reconstruction, motion / self.config.motion_scale)
-        q = self.performer.rollout(self.performer.message(z), q0)
+        reconstruction_loss = self.reconstruction_loss(z, motion)
+        contexts = self.performer.message(z)
+        q = self.performer.rollout(contexts[:, 0] if self.config.tokens == 1 else contexts, q0)
         return q, ids, reconstruction_loss, vq_loss
 
     @torch.no_grad()
@@ -132,7 +149,7 @@ def predict(model, motion, target, control="correct"):
         if control == "shuffle_demonstrations":
             ids = ids.roll(1, 0)
         elif control == "permute_steps":
-            ids = ids[:, torch.randperm(95, generator=torch.Generator().manual_seed(777))]
+            ids = ids[:, torch.randperm(ids.shape[1], generator=torch.Generator().manual_seed(777))]
         elif control != "correct":
             raise ValueError("unknown intervention")
         qs.append(model.decode(ids, b[:, 0]))
@@ -149,7 +166,17 @@ def usage(ids):
     }
 
 
-def train(source, output, epochs=300, pretrain_epochs=40, min_epochs=80, patience=40, threads=4):
+def train(
+    source,
+    output,
+    epochs=300,
+    pretrain_epochs=40,
+    min_epochs=80,
+    patience=40,
+    threads=4,
+    mode="local",
+    auxiliary_clock=False,
+):
     if epochs < 1 or pretrain_epochs < 0 or not 0 <= min_epochs <= epochs or patience < 0:
         raise ValueError("invalid epoch/stopping budget")
     output = Path(output)
@@ -158,8 +185,9 @@ def train(source, output, epochs=300, pretrain_epochs=40, min_epochs=80, patienc
     torch.set_num_threads(threads)
     torch.manual_seed(123)
     torch.use_deterministic_algorithms(True)
-    config = VQConfig()
+    config = VQConfig(mode=mode, auxiliary_clock=auxiliary_clock)
     model = VQModel(config)
+    initial_hash = weight_hash(model)
     model.initialize_codebook(splits["train"][0])
     generator = torch.Generator().manual_seed(123)
     loader = DataLoader(
@@ -177,7 +205,7 @@ def train(source, output, epochs=300, pretrain_epochs=40, min_epochs=80, patienc
         for a, _ in loader:
             optimizer.zero_grad()
             z, ids, vq_loss = model.quantize(model.translator(a))
-            loss = F.mse_loss(model.reconstruct(z), a / config.motion_scale) + vq_loss
+            loss = model.reconstruction_loss(z, a) + vq_loss
             loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
@@ -271,6 +299,7 @@ def train(source, output, epochs=300, pretrain_epochs=40, min_epochs=80, patienc
     report = {
         "config": asdict(config),
         "training": {
+            "initial_weights_before_kmeans_sha256": initial_hash,
             "seed": 123,
             "batch_size": 64,
             "epochs": epochs,
@@ -302,7 +331,7 @@ def train(source, output, epochs=300, pretrain_epochs=40, min_epochs=80, patienc
             "torch": torch.__version__,
             "lock_sha256": hashlib.sha256(Path("uv.lock").read_bytes()).hexdigest(),
         },
-        "limits": "One seed; circle-only, fixed phase/progress. 95 tokens/285 nominal bits. "
+        "limits": f"One seed; circle-only, fixed phase/progress. {config.tokens} tokens/{config.tokens * 3} nominal bits. "
         "TCN receptive field 15 actions; additional 40-epoch reconstruction pretraining. "
         "No diameter/quantizer labels, no continuous latent side channel, no Transformer. "
         "Not a parameter/compute-matched comparison or proof of composition/editing.",
@@ -334,6 +363,8 @@ def main():
     parser.add_argument("--min-epochs", type=int, default=80)
     parser.add_argument("--patience", type=int, default=40)
     parser.add_argument("--threads", type=int, default=4)
+    parser.add_argument("--mode", choices=["global", "local"], default="local")
+    parser.add_argument("--auxiliary-clock", action="store_true")
     parser.add_argument("--evaluate", action="store_true")
     args = vars(parser.parse_args())
     if args.pop("evaluate"):
