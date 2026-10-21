@@ -31,3 +31,22 @@ Run the README commands; `figures/vq.py` compares with the saved MLP local95 run
 Evaluation includes cross-demonstration score shuffling, fixed-seed temporal permutation, symbol usage/perplexity, circle-fit radial/diameter/closure/turns diagnostics and checkpoint reload. The symbol scatter is descriptive: TCN context means identical current displacements need not receive identical codes.
 
 Comparisons are not parameter/compute matched: the TCN replaces a smaller MLP, objectives and initialization differ, and this experiment adds40pretraining epochs. One seed, fixed-phase circles and a shared Performer progress clock do not establish a general motion language, composition, local editing, cross-morphology transfer or autonomous grammar discovery. A future Transformer would be trained on stable discrete score sequences after this translation/execution stage is validated.
+
+## Completed results
+
+The selected checkpoint is joint epoch166; training stopped at206 under validation patience, after40pretraining epochs. All normal test executions were feasible. Checkpoint reload reproduces the hard-integer test metrics.
+
+| Condition | Mean NRMSE | Strict success | Feasible |
+|---|---:|---:|---:|
+| TCN/VQ, correct95-ID score | **0.0109842** | **121/240 =50.42%** |100% |
+| Score from another demonstration |0.0817264 |8/240 =3.33% |100% |
+| Same score, action order permuted |0.0970663 |0/240 =0% |239/240 |
+| Earlier MLP local95 |0.0139532 |73/240 =30.42% |100% |
+
+The TCN/VQ model uses all eight codes; counts over22,800test actions are[2674,4103,2669,1830,2040,4645,3266,1573], giving perplexity7.51175. There are93distinct test motion scores. Code IDs have no imposed directional or diameter meaning and are not comparable numerically to older models' IDs.
+
+Circle fitting gives mean radial residual2.50%of radius, fitted-diameter error2.68%, closure error4.34%of target diameter and0.9965turns. The previous MLP local encoder had2.82%radial residual and3.42%diameter error. Both shape and size improve descriptively, while strict ordered-trajectory success remains only about half of examples.
+
+Compared with the earlier local MLP, success increases20percentage points and mean NRMSE decreases about21.3%. This is an observed result of the combined architectural, initialization, auxiliary-loss and pretraining changes; it does not isolate VQ or TCN as the sole cause. The TCN/VQ model has158,348parameters including119,874in the unchanged Performer architecture, versus124,746total for the previous matched MLP experiment. Performer initialization is not matched to those previous experiments because the Translator consumes a different random-number sequence and its codebook is pretrained.
+
+The strong permutation failure shows that token order matters to this controller. It does not prove that a single code has a reusable local meaning, that arbitrary code combinations execute correctly, or that the symbols generalize beyond this circle distribution. Temporal position, fixed circle phase and the GRU's shared progress clock remain confounds. The eight-bin single-token control achieved48.75%, but used true-diameter labels and a95times smaller message budget, so its proximity to50.42%is not evidence of equal representational capability. No Transformer has been trained.
